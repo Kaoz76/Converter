@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "4zBj5dpSMLg=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\kaano\\OneDrive\\Desktop\\Converter\\TurboConverter\\TurboConverter.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\kaano\\.nuget\\packages\\docnet.core\\2.6.0\\docnet.core.2.6.0.nupkg.sha512",
+    "C:\\Users\\kaano\\.nuget\\packages\\questpdf\\2025.12.3\\questpdf.2025.12.3.nupkg.sha512",
+    "C:\\Users\\kaano\\.nuget\\packages\\skiasharp\\3.119.1\\skiasharp.3.119.1.nupkg.sha512",
+    "C:\\Users\\kaano\\.nuget\\packages\\skiasharp.nativeassets.macos\\3.119.1\\skiasharp.nativeassets.macos.3.119.1.nupkg.sha512",
+    "C:\\Users\\kaano\\.nuget\\packages\\skiasharp.nativeassets.win32\\3.119.1\\skiasharp.nativeassets.win32.3.119.1.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -14,7 +14,8 @@ namespace TurboConverter
     public partial class MainWindow : Window
     {
         private string _gereksiz_SonCiktiKlasoru = string.Empty;
-
+        
+        private CancellationTokenSource? _cancellationTokenSource;
         public MainWindow()
         {
             InitializeComponent();
@@ -38,6 +39,15 @@ namespace TurboConverter
                 await ProcessFilesAsync(gereksiz_Diyalog.FileNames);
             }
         }
+        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+{
+    if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
+    {
+        _cancellationTokenSource.Cancel();
+        Gereksiz_DurumMetni.Text = "İptal ediliyor, lütfen bekleyin...";
+        BtnCancel.IsEnabled = false; // Kullanıcı üst üste basamasın
+    }
+}
 
         private void BtnOpenFolder_Click(object sender, RoutedEventArgs e)
         {
@@ -73,6 +83,9 @@ namespace TurboConverter
             Gereksiz_IlerlemeCubugu.Value = 0;
             BtnOpenFolder.Visibility = Visibility.Collapsed;
 
+            BtnCancel.Visibility = Visibility.Visible;
+            BtnCancel.IsEnabled = true;
+
             var gereksiz_TumDosyalar = ResolveFiles(paths);
             if (gereksiz_TumDosyalar.Count == 0) return;
 
@@ -91,44 +104,77 @@ namespace TurboConverter
 
             _gereksiz_SonCiktiKlasoru = gereksiz_PdfModuMu ? Path.Combine(firstFileDir, "Converted_Jpgs") : firstFileDir;
 
-            await Task.Run(() =>
+            _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
+            try
             {
-                if (gereksiz_PdfModuMu)
-                {
-                    Directory.CreateDirectory(_gereksiz_SonCiktiKlasoru);
+            await Task.Run(() =>
+        {
+            if (gereksiz_PdfModuMu)
+            {
+                Directory.CreateDirectory(_gereksiz_SonCiktiKlasoru);
 
-                    Parallel.ForEach(gereksiz_TumDosyalar, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, (file) =>
-                    {
-                        if (Path.GetExtension(file).ToLower() == ".pdf")
-                        {
-                            ConvertPdfToJpg(file, _gereksiz_SonCiktiKlasoru, gereksiz_KaliteCarpani);
-                        }
-                        Gereksiz_UIGuncelle(Interlocked.Increment(ref gereksiz_Islenen), gereksiz_Toplam);
-                    });
-                }
-                else
+                // Paralel işlem için token ayarı
+                var parallelOptions = new ParallelOptions 
+                { 
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = token 
+                };
+
+                Parallel.ForEach(gereksiz_TumDosyalar, parallelOptions, (file) =>
                 {
-                    ConvertImagesToPdf(gereksiz_TumDosyalar, _gereksiz_SonCiktiKlasoru);
-                    Gereksiz_UIGuncelle(gereksiz_Toplam, gereksiz_Toplam);
-                }
-            });
+                    // Her yeni dosya başladığında iptal durumu kontrolü
+                    token.ThrowIfCancellationRequested(); 
+
+                    if (Path.GetExtension(file).ToLower() == ".pdf")
+                    {
+                        ConvertPdfToJpg(file, _gereksiz_SonCiktiKlasoru, gereksiz_KaliteCarpani, token);
+                    }
+                    Gereksiz_UIGuncelle(Interlocked.Increment(ref gereksiz_Islenen), gereksiz_Toplam);
+                });
+            }
+            else
+            {
+                ConvertImagesToPdf(gereksiz_TumDosyalar, _gereksiz_SonCiktiKlasoru, token);
+                Gereksiz_UIGuncelle(gereksiz_Toplam, gereksiz_Toplam);
+            }
+        }, token);
 
             Gereksiz_DurumMetni.Text = "İşlem Tamamlandı!";
-            BtnOpenFolder.Visibility = Visibility.Visible;
-            MessageBox.Show("İşlem tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+                BtnOpenFolder.Visibility = Visibility.Visible;
+                MessageBox.Show("İşlem tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException)
+            {
+                // Kullanıcı işlemi iptal ettiğinde burası çalışır
+                Gereksiz_DurumMetni.Text = "İşlem İptal Edildi!";
+                Gereksiz_IlerlemeMetni.Text = "İptal Edildi";
+                MessageBox.Show("İşlem iptal edildi. Oluşturulan yarım dosyalar klasörde kalmış olabilir.", "İptal Edildi", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                if (_cancellationTokenSource != null)
+                {
+                    _cancellationTokenSource.Dispose();
+                    _cancellationTokenSource = null;
+                }
+               
+                BtnCancel.Visibility = Visibility.Collapsed;
+            }
 
         private void ConvertPdfToJpg(string pdfPath, string outputFolder, double scaleFactor)
         {
             try
-            {
-                using var docReader = DocLib.Instance.GetDocReader(pdfPath, new PageDimensions(scaleFactor));
-                int pageCount = docReader.GetPageCount();
+    {
+        using var docReader = DocLib.Instance.GetDocReader(pdfPath, new PageDimensions(scaleFactor));
+        int pageCount = docReader.GetPageCount();
 
-                for (int i = 0; i < pageCount; i++)
-                {
-                    using var pageReader = docReader.GetPageReader(i);
-                    var rawBytes = pageReader.GetImage();
+        for (int i = 0; i < pageCount; i++)
+        {
+                    token.ThrowIfCancellationRequested(); 
+
+            using var pageReader = docReader.GetPageReader(i);
+            var rawBytes = pageReader.GetImage();
                     var width = pageReader.GetPageWidth();
                     var height = pageReader.GetPageHeight();
 
@@ -141,11 +187,15 @@ namespace TurboConverter
                     using var encodedData = image.Encode(SKEncodedImageFormat.Jpeg, jpgQuality);
 
                     string fileName = $"{Path.GetFileNameWithoutExtension(pdfPath)}_Page_{i + 1}.jpg";
-                    string outputFile = Path.Combine(outputFolder, fileName);
+            string outputFile = Path.Combine(outputFolder, fileName);
 
-                    using var stream = File.OpenWrite(outputFile);
-                    encodedData.SaveTo(stream);
+            using var stream = File.OpenWrite(outputFile);
+            encodedData.SaveTo(stream);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+               throw;
             }
             catch (Exception ex)
             {
@@ -164,6 +214,8 @@ namespace TurboConverter
                 {
                     foreach (var imgPath in imageFiles)
                     {
+                        token.ThrowIfCancellationRequested();
+
                         if (IsImageFile(imgPath))
                         {
                             container.Page(page =>
@@ -174,6 +226,10 @@ namespace TurboConverter
                         }
                     }
                 }).GeneratePdf(outputPdfPath);
+            }
+            catch (OperationCanceledException)
+            {
+                throw; // Ana metoda fırlat
             }
             catch (Exception ex)
             {

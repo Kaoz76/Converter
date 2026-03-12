@@ -62,14 +62,27 @@
             <ProgressBar x:Name="Gereksiz_IlerlemeCubugu" Height="20" Minimum="0" Maximum="100" Value="0" Foreground="#4CAF50"/>
             <TextBlock x:Name="Gereksiz_IlerlemeMetni" Text="Hazır" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="#555"/>
 
-            <Button x:Name="BtnOpenFolder" Content="📂 Dosyaları Aç" Click="BtnOpenFolder_Click" Visibility="Collapsed" 
-                    HorizontalAlignment="Center" Margin="0,10,0,0" Padding="20,10" Background="#4CAF50" Foreground="White" FontWeight="Bold" BorderThickness="0">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="5"/>
-                    </Style>
-                </Button.Resources>
-            </Button>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                
+                <Button x:Name="BtnOpenFolder" Content="📂 Dosyaları Aç" Click="BtnOpenFolder_Click" Visibility="Collapsed" 
+                        Margin="5,0" Padding="20,10" Background="#4CAF50" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="5"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+
+                <Button x:Name="BtnCancel" Content="❌ İptal Et" Click="BtnCancel_Click" Visibility="Collapsed" 
+                        Margin="5,0" Padding="20,10" Background="#F44336" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="5"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Window>

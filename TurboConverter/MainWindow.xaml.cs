@@ -111,7 +111,17 @@ namespace TurboConverter
             string? firstFileDir = Path.GetDirectoryName(tumDosyalar[0]);
             if (firstFileDir == null) firstFileDir = paths[0]; 
 
-            _sonCiktiKlasoru = pdfModuMu ? Path.Combine(firstFileDir, "Converted_Jpgs") : firstFileDir;
+            if (pdfModuMu)
+            {
+                
+                string baseOutputDir = Path.Combine(firstFileDir, "Converted_Jpgs");
+                _sonCiktiKlasoru = GetUniquePath(baseOutputDir, true);
+            }
+            else
+            {
+            
+                _sonCiktiKlasoru = firstFileDir; 
+            }
 
             _cancellationTokenSource = new CancellationTokenSource();
             var token = _cancellationTokenSource.Token;
@@ -220,7 +230,8 @@ namespace TurboConverter
         private void ConvertImagesToPdf(List<string> imageFiles, string outputFolder, CancellationToken token)
         {
             if (imageFiles.Count == 0) return;
-            string outputPdfPath = Path.Combine(outputFolder, "Merged_Images.pdf");
+            string basePdfPath = Path.Combine(outputFolder, "Merged_Images.pdf");
+            string outputPdfPath = GetUniquePath(basePdfPath, false); 
 
             try
             {
@@ -285,5 +296,44 @@ namespace TurboConverter
             var ext = Path.GetExtension(path).ToLower();
             return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".bmp";
         }
+        // Eğer dosya veya klasör varsa, sonuna (1), (2) ekleyerek benzersiz bir yol üretir.
+    private string GetUniquePath(string path, bool isDirectory)
+    {
+    if (isDirectory)
+    {
+        if (!Directory.Exists(path)) return path;
+        
+        int count = 1;
+        string dir = Path.GetDirectoryName(path) ?? string.Empty;
+        string name = Path.GetFileName(path);
+        
+        string newPath;
+        do
+        {
+            newPath = Path.Combine(dir, $"{name} ({count})");
+            count++;
+        } while (Directory.Exists(newPath));
+        
+        return newPath;
+    }
+    else
+    {
+        if (!File.Exists(path)) return path;
+        
+        int count = 1;
+        string dir = Path.GetDirectoryName(path) ?? string.Empty;
+        string name = Path.GetFileNameWithoutExtension(path);
+        string ext = Path.GetExtension(path);
+        
+        string newPath;
+        do
+        {
+            newPath = Path.Combine(dir, $"{name} ({count}){ext}");
+            count++;
+        } while (File.Exists(newPath));
+        
+        return newPath;
+    }
+}
     }
 }

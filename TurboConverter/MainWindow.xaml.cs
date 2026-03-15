@@ -1,4 +1,5 @@
 using System;
+using System.Media;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -158,19 +159,29 @@ namespace TurboConverter
                     }
                 }, token);
 
-                TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
-                BtnOpenFolder.Visibility = Visibility.Visible;
-                MessageBox.Show("Dönüştürme işlemi tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                           
+            TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
+            BtnOpenFolder.Visibility = Visibility.Visible;
+
+           
+            SystemSounds.Asterisk.Play(); 
+            MessageBox.Show("Dönüştürme işlemi tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException)
             {
                 TxtDurumMetni.Text = "İşlem Kullanıcı Tarafından İptal Edildi!";
                 TxtIlerlemeYuzdesi.Text = "İptal Edildi";
+                
+                // Uyarı sesi çal
+                SystemSounds.Exclamation.Play(); 
                 MessageBox.Show("İşlem iptal edildi. Oluşturulan bazı dosyalar klasörde kalmış olabilir.", "İptal", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
                 TxtDurumMetni.Text = "Bir hata oluştu!";
+                
+                // Hata sesi çal
+                SystemSounds.Hand.Play(); 
                 MessageBox.Show($"Beklenmeyen bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally

@@ -27,13 +27,12 @@ namespace TurboConverter
 
         private async void BtnSelectFiles_Click(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog dialog = new OpenFileDialog
-            {
-                Multiselect = true
-            };
+            OpenFileDialog dialog = new OpenFileDialog { Multiselect = true };
 
-            if (RbPdfToJpg.IsChecked == true)
+            if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true)
                 dialog.Filter = "PDF Dosyaları (*.pdf)|*.pdf";
+            else if (RbTextToPdf.IsChecked == true)
+                dialog.Filter = "Metin Dosyaları (*.txt)|*.txt";
             else
                 dialog.Filter = "Resim Dosyaları|*.jpg;*.jpeg;*.png;*.webp;*.bmp";
 
@@ -83,12 +82,12 @@ namespace TurboConverter
 
         private async Task ProcessFilesAsync(string[] paths)
         {
-            // Arayüzü işlem başlangıcına göre hazırla
+            
             TxtDurumMetni.Text = "İşleniyor...";
             ProgressBarIlerleme.Value = 0;
             BtnOpenFolder.Visibility = Visibility.Collapsed;
             
-            // İptal butonunu görünür ve aktif yap
+            
             BtnCancel.Visibility = Visibility.Visible;
             BtnCancel.IsEnabled = true;
 
@@ -103,7 +102,7 @@ namespace TurboConverter
             int islenenDosya = 0;
             bool pdfModuMu = RbPdfToJpg.IsChecked == true;
 
-            double kaliteCarpani = 2.0; // Varsayılan Orta kalite
+            double kaliteCarpani = 2.0; 
             if (CmbQuality.SelectedIndex == 0) kaliteCarpani = 1.0;
             else if (CmbQuality.SelectedIndex == 1) kaliteCarpani = 2.0;
             else if (CmbQuality.SelectedIndex == 2) kaliteCarpani = 4.0;
@@ -112,17 +111,10 @@ namespace TurboConverter
             string? firstFileDir = Path.GetDirectoryName(tumDosyalar[0]);
             if (firstFileDir == null) firstFileDir = paths[0]; 
 
-            if (pdfModuMu)
-            {
-                
-                string baseOutputDir = Path.Combine(firstFileDir, "Converted_Jpgs");
-                _sonCiktiKlasoru = GetUniquePath(baseOutputDir, true);
-            }
-            else
-            {
-            
-                _sonCiktiKlasoru = firstFileDir; 
-            }
+            string klasorAdi = RbPdfToJpg.IsChecked == true ? "Converted_Jpgs" : "Extracted_Texts";
+            _sonCiktiKlasoru = (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true) 
+                ? GetUniquePath(Path.Combine(firstFileDir, klasorAdi), true) 
+                : firstFileDir;
 
             _cancellationTokenSource = new CancellationTokenSource();
             var token = _cancellationTokenSource.Token;
@@ -130,34 +122,35 @@ namespace TurboConverter
             try
             {
                 await Task.Run(() =>
-                {
-                    if (pdfModuMu)
-                    {
-                        Directory.CreateDirectory(_sonCiktiKlasoru);
-
-                        var parallelOptions = new ParallelOptions
+{
+                        if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true)
                         {
-                            MaxDegreeOfParallelism = Environment.ProcessorCount,
-                            CancellationToken = token
-                        };
+                            Directory.CreateDirectory(_sonCiktiKlasoru);
+                            var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
-                        Parallel.ForEach(tumDosyalar, parallelOptions, (file) =>
-                        {
-                            token.ThrowIfCancellationRequested();
-
-                            if (Path.GetExtension(file).ToLower() == ".pdf")
+                            Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                             {
-                                ConvertPdfToJpg(file, _sonCiktiKlasoru, kaliteCarpani, token);
-                            }
-                            UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya);
-                        });
-                    }
-                    else
-                    {
-                        ConvertImagesToPdf(tumDosyalar, _sonCiktiKlasoru, token);
-                        UIGuncelle(toplamDosya, toplamDosya);
-                    }
-                }, token);
+                                token.ThrowIfCancellationRequested();
+
+                                if (Path.GetExtension(file).ToLower() == ".pdf")
+                                {
+                                    if (RbPdfToJpg.IsChecked == true) ConvertPdfToJpg(file, _sonCiktiKlasoru, kaliteCarpani, token);
+                                    else ConvertPdfToText(file, _sonCiktiKlasoru, token); // Yeni metod
+                                }
+                                UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya);
+                            });
+                        }
+                        else if (RbImgToPdf.IsChecked == true)
+                        {
+                            ConvertImagesToPdf(tumDosyalar, _sonCiktiKlasoru, token);
+                            UIGuncelle(toplamDosya, toplamDosya);
+                        }
+                        else if (RbTextToPdf.IsChecked == true)
+                        {
+                            ConvertTextToPdf(tumDosyalar, _sonCiktiKlasoru, token); // Yeni metod
+                            UIGuncelle(toplamDosya, toplamDosya);
+                        }
+                    }, token);
 
                            
             TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
@@ -271,6 +264,67 @@ namespace TurboConverter
             {
                 MessageBox.Show($"PDF Oluşturma Hatası: {ex.Message}");
             }
+        }
+        private void ConvertPdfToText(string pdfPath, string outputFolder, CancellationToken token)
+        {
+            try
+            {
+                using var docReader = DocLib.Instance.GetDocReader(pdfPath, new PageDimensions(1.0));
+                int pageCount = docReader.GetPageCount();
+
+                string baseOutput = Path.Combine(outputFolder, $"{Path.GetFileNameWithoutExtension(pdfPath)}.txt");
+                string outputFile = GetUniquePath(baseOutput, false);
+
+                using var writer = new StreamWriter(outputFile);
+
+                for (int i = 0; i < pageCount; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    using var pageReader = docReader.GetPageReader(i);
+                    
+                    string text = pageReader.GetText();
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        writer.WriteLine($"--- Sayfa {i + 1} ---");
+                        writer.WriteLine(text);
+                        writer.WriteLine();
+                    }
+                }
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Metin Çıkarma Hatası: {ex.Message}"); }
+        }
+
+        private void ConvertTextToPdf(List<string> textFiles, string outputFolder, CancellationToken token)
+        {
+            if (textFiles.Count == 0) return;
+            
+            string basePdfPath = Path.Combine(outputFolder, "Merged_Texts.pdf");
+            string outputPdfPath = GetUniquePath(basePdfPath, false);
+
+            try
+            {
+                Document.Create(container =>
+                {
+                    foreach (var txtPath in textFiles)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        if (Path.GetExtension(txtPath).ToLower() == ".txt")
+                        {
+                            string content = File.ReadAllText(txtPath);
+                            container.Page(page =>
+                            {
+                                page.Margin(40);
+                                page.DefaultTextStyle(x => x.FontSize(12));
+                                page.Content().Text(content);
+                            });
+                        }
+                    }
+                }).GeneratePdf(outputPdfPath);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { MessageBox.Show($"PDF Oluşturma Hatası: {ex.Message}"); }
         }
 
         private void UIGuncelle(int current, int total)

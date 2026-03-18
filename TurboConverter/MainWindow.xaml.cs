@@ -1,7 +1,9 @@
 using System;
-using System.Media;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.Media;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -16,13 +18,26 @@ namespace TurboConverter
 {
     public partial class MainWindow : Window
     {
+        
         private string _sonCiktiKlasoru = string.Empty;
         private CancellationTokenSource? _cancellationTokenSource;
+        private readonly string _ayarlarDosyaYolu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TurboConverter", "settings.json");
 
+        
         public MainWindow()
         {
             InitializeComponent();
             QuestPDF.Settings.License = LicenseType.Community;
+            
+            // Uygulama açılırken ayarları yükle
+            AyarlariYukle(); 
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            // Uygulama kapanırken son ayarları diske kaydet
+            AyarlariKaydet();
+            base.OnClosing(e);
         }
 
         private async void BtnSelectFiles_Click(object sender, RoutedEventArgs e)
@@ -82,11 +97,9 @@ namespace TurboConverter
 
         private async Task ProcessFilesAsync(string[] paths)
         {
-            
             TxtDurumMetni.Text = "İşleniyor...";
             ProgressBarIlerleme.Value = 0;
             BtnOpenFolder.Visibility = Visibility.Collapsed;
-            
             
             BtnCancel.Visibility = Visibility.Visible;
             BtnCancel.IsEnabled = true;
@@ -100,7 +113,6 @@ namespace TurboConverter
 
             int toplamDosya = tumDosyalar.Count;
             int islenenDosya = 0;
-            bool pdfModuMu = RbPdfToJpg.IsChecked == true;
 
             double kaliteCarpani = 2.0; 
             if (CmbQuality.SelectedIndex == 0) kaliteCarpani = 1.0;
@@ -122,50 +134,47 @@ namespace TurboConverter
             try
             {
                 await Task.Run(() =>
-{
-                        if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true)
-                        {
-                            Directory.CreateDirectory(_sonCiktiKlasoru);
-                            var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
+                {
+                    if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true)
+                    {
+                        Directory.CreateDirectory(_sonCiktiKlasoru);
+                        var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
-                            Parallel.ForEach(tumDosyalar, pOptions, (file) =>
+                        Parallel.ForEach(tumDosyalar, pOptions, (file) =>
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            if (Path.GetExtension(file).ToLower() == ".pdf")
                             {
-                                token.ThrowIfCancellationRequested();
+                                if (RbPdfToJpg.IsChecked == true) ConvertPdfToJpg(file, _sonCiktiKlasoru, kaliteCarpani, token);
+                                else ConvertPdfToText(file, _sonCiktiKlasoru, token);
+                            }
+                            UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya);
+                        });
+                    }
+                    else if (RbImgToPdf.IsChecked == true)
+                    {
+                        ConvertImagesToPdf(tumDosyalar, _sonCiktiKlasoru, token);
+                        UIGuncelle(toplamDosya, toplamDosya);
+                    }
+                    else if (RbTextToPdf.IsChecked == true)
+                    {
+                        ConvertTextToPdf(tumDosyalar, _sonCiktiKlasoru, token);
+                        UIGuncelle(toplamDosya, toplamDosya);
+                    }
+                }, token);
 
-                                if (Path.GetExtension(file).ToLower() == ".pdf")
-                                {
-                                    if (RbPdfToJpg.IsChecked == true) ConvertPdfToJpg(file, _sonCiktiKlasoru, kaliteCarpani, token);
-                                    else ConvertPdfToText(file, _sonCiktiKlasoru, token); // Yeni metod
-                                }
-                                UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya);
-                            });
-                        }
-                        else if (RbImgToPdf.IsChecked == true)
-                        {
-                            ConvertImagesToPdf(tumDosyalar, _sonCiktiKlasoru, token);
-                            UIGuncelle(toplamDosya, toplamDosya);
-                        }
-                        else if (RbTextToPdf.IsChecked == true)
-                        {
-                            ConvertTextToPdf(tumDosyalar, _sonCiktiKlasoru, token); // Yeni metod
-                            UIGuncelle(toplamDosya, toplamDosya);
-                        }
-                    }, token);
+                TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
+                BtnOpenFolder.Visibility = Visibility.Visible;
 
-                           
-            TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
-            BtnOpenFolder.Visibility = Visibility.Visible;
-
-           
-            SystemSounds.Asterisk.Play(); 
-            MessageBox.Show("Dönüştürme işlemi tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                SystemSounds.Asterisk.Play(); 
+                MessageBox.Show("Dönüştürme işlemi tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException)
             {
                 TxtDurumMetni.Text = "İşlem Kullanıcı Tarafından İptal Edildi!";
                 TxtIlerlemeYuzdesi.Text = "İptal Edildi";
                 
-                // Uyarı sesi çal
                 SystemSounds.Exclamation.Play(); 
                 MessageBox.Show("İşlem iptal edildi. Oluşturulan bazı dosyalar klasörde kalmış olabilir.", "İptal", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -173,7 +182,6 @@ namespace TurboConverter
             {
                 TxtDurumMetni.Text = "Bir hata oluştu!";
                 
-                // Hata sesi çal
                 SystemSounds.Hand.Play(); 
                 MessageBox.Show($"Beklenmeyen bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -185,7 +193,6 @@ namespace TurboConverter
                     _cancellationTokenSource = null;
                 }
                 
-                // İşlem bittiğinde iptal butonunu gizle
                 BtnCancel.Visibility = Visibility.Collapsed;
             }
         }
@@ -223,7 +230,7 @@ namespace TurboConverter
             }
             catch (OperationCanceledException)
             {
-                throw; // İptal fırlatmasını üst bloğa ilet
+                throw; 
             }
             catch (Exception ex)
             {
@@ -258,13 +265,14 @@ namespace TurboConverter
             }
             catch (OperationCanceledException)
             {
-                throw; // İptal fırlatmasını üst bloğa ilet
+                throw; 
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"PDF Oluşturma Hatası: {ex.Message}");
             }
         }
+
         private void ConvertPdfToText(string pdfPath, string outputFolder, CancellationToken token)
         {
             try
@@ -361,44 +369,107 @@ namespace TurboConverter
             var ext = Path.GetExtension(path).ToLower();
             return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".bmp";
         }
-        // Eğer dosya veya klasör varsa, sonuna (1), (2) ekleyerek benzersiz bir yol üretir.
-    private string GetUniquePath(string path, bool isDirectory)
-    {
-    if (isDirectory)
-    {
-        if (!Directory.Exists(path)) return path;
-        
-        int count = 1;
-        string dir = Path.GetDirectoryName(path) ?? string.Empty;
-        string name = Path.GetFileName(path);
-        
-        string newPath;
-        do
+
+        private string GetUniquePath(string path, bool isDirectory)
         {
-            newPath = Path.Combine(dir, $"{name} ({count})");
-            count++;
-        } while (Directory.Exists(newPath));
-        
-        return newPath;
-    }
-    else
-    {
-        if (!File.Exists(path)) return path;
-        
-        int count = 1;
-        string dir = Path.GetDirectoryName(path) ?? string.Empty;
-        string name = Path.GetFileNameWithoutExtension(path);
-        string ext = Path.GetExtension(path);
-        
-        string newPath;
-        do
+            if (isDirectory)
+            {
+                if (!Directory.Exists(path)) return path;
+                
+                int count = 1;
+                string dir = Path.GetDirectoryName(path) ?? string.Empty;
+                string name = Path.GetFileName(path);
+                
+                string newPath;
+                do
+                {
+                    newPath = Path.Combine(dir, $"{name} ({count})");
+                    count++;
+                } while (Directory.Exists(newPath));
+                
+                return newPath;
+            }
+            else
+            {
+                if (!File.Exists(path)) return path;
+                
+                int count = 1;
+                string dir = Path.GetDirectoryName(path) ?? string.Empty;
+                string name = Path.GetFileNameWithoutExtension(path);
+                string ext = Path.GetExtension(path);
+                
+                string newPath;
+                do
+                {
+                    newPath = Path.Combine(dir, $"{name} ({count}){ext}");
+                    count++;
+                } while (File.Exists(newPath));
+                
+                return newPath;
+            }
+        }
+
+        private void AyarlariYukle()
         {
-            newPath = Path.Combine(dir, $"{name} ({count}){ext}");
-            count++;
-        } while (File.Exists(newPath));
-        
-        return newPath;
-    }
-}
+            try
+            {
+                if (File.Exists(_ayarlarDosyaYolu))
+                {
+                    string json = File.ReadAllText(_ayarlarDosyaYolu);
+                    var ayarlar = JsonSerializer.Deserialize<AppSettings>(json);
+                    
+                    if (ayarlar != null)
+                    {
+                        
+                        CmbQuality.SelectedIndex = ayarlar.SeciliKalite;
+
+                        
+                        switch (ayarlar.SeciliMod)
+                        {
+                            case 0: RbPdfToJpg.IsChecked = true; break;
+                            case 1: RbImgToPdf.IsChecked = true; break;
+                            case 2: RbPdfToText.IsChecked = true; break;
+                            case 3: RbTextToPdf.IsChecked = true; break;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                System.Diagnostics.Debug.WriteLine("Ayarlar yüklenemedi, varsayılanlar kullanılacak.");
+            }
+        }
+
+        private void AyarlariKaydet()
+        {
+            try
+            {
+                var ayarlar = new AppSettings
+                {
+                    SeciliKalite = CmbQuality.SelectedIndex,
+                    SeciliMod = RbPdfToJpg.IsChecked == true ? 0 :
+                                RbImgToPdf.IsChecked == true ? 1 :
+                                RbPdfToText.IsChecked == true ? 2 : 3
+                };
+
+               
+                Directory.CreateDirectory(Path.GetDirectoryName(_ayarlarDosyaYolu)!);
+                
+                
+                string json = JsonSerializer.Serialize(ayarlar);
+                File.WriteAllText(_ayarlarDosyaYolu, json);
+            }
+            catch
+            {
+                System.Diagnostics.Debug.WriteLine("Ayarlar kaydedilemedi.");
+            }
+        }
+    } 
+
+    
+    public class AppSettings
+    {
+        public int SeciliMod { get; set; } = 0; 
+        public int SeciliKalite { get; set; } = 2; 
     }
 }

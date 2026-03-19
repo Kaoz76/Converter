@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Docnet.Core" Version="2.6.0" />
+    <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="QuestPDF" Version="2025.12.3" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
   </ItemGroup>

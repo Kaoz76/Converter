@@ -21,12 +21,15 @@
             </Border.Effect>
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Ne yapmak istiyorsunuz?" FontWeight="SemiBold" FontSize="16" Foreground="#34495E" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-                
+
                 <WrapPanel HorizontalAlignment="Center" Margin="0,0,0,20">
                     <RadioButton x:Name="RbPdfToJpg" Content="PDF ➔ Resim (JPG)" IsChecked="True" FontSize="15" Margin="0,0,20,10" GroupName="Mode" Foreground="#2C3E50"/>
                     <RadioButton x:Name="RbImgToPdf" Content="Resimler ➔ PDF" FontSize="15" Margin="0,0,20,10" GroupName="Mode" Foreground="#2C3E50"/>
                     <RadioButton x:Name="RbPdfToText" Content="PDF ➔ Metin (TXT)" FontSize="15" Margin="0,0,20,10" GroupName="Mode" Foreground="#2C3E50"/>
-                    <RadioButton x:Name="RbTextToPdf" Content="Metin (TXT) ➔ PDF" FontSize="15" Margin="0,0,0,10" GroupName="Mode" Foreground="#2C3E50"/>
+                    <RadioButton x:Name="RbTextToPdf" Content="Metin (TXT) ➔ PDF" FontSize="15" Margin="0,0,20,10" GroupName="Mode" Foreground="#2C3E50"/>
+
+                    <RadioButton x:Name="RbPdfMerge" Content="PDF'leri Birleştir" FontSize="15" Margin="0,0,20,10" GroupName="Mode" Foreground="#2C3E50"/>
+                    <RadioButton x:Name="RbPdfSplit" Content="PDF'i Sayfalara Böl" FontSize="15" Margin="0,0,0,10" GroupName="Mode" Foreground="#2C3E50"/>
                 </WrapPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -41,7 +44,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" BorderBrush="#3498DB" BorderThickness="2" CornerRadius="12" Background="White" AllowDrop="True" Drop="DropZone_Drop" StrokeDashArray="4 4">
+        <Border Grid.Row="2" BorderBrush="#3498DB" BorderThickness="2" CornerRadius="12" Background="White" AllowDrop="True" Drop="DropZone_Drop">
             <Border.Style>
                 <Style TargetType="Border">
                     <Style.Triggers>

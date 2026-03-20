@@ -32,14 +32,21 @@
                     <RadioButton x:Name="RbPdfSplit" Content="PDF'i Sayfalara Böl" FontSize="15" Margin="0,0,0,10" GroupName="Mode" Foreground="#2C3E50"/>
                 </WrapPanel>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <TextBlock Text="Çıktı Görüntü Kalitesi:" VerticalAlignment="Center" FontSize="14" Foreground="#34495E" Margin="0,0,15,0"/>
-                    <ComboBox x:Name="CmbQuality" Width="160" SelectedIndex="2" FontSize="14" Padding="5">
-                        <ComboBoxItem Content="Düşük (Hızlı)"/>
-                        <ComboBoxItem Content="Orta (Dengeli)"/>
-                        <ComboBoxItem Content="Yüksek (Önerilen)"/>
-                        <ComboBoxItem Content="Ultra (Büyük Dosya Boyutu)"/>
-                    </ComboBox>
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                        <TextBlock Text="Çıktı Görüntü Kalitesi:" VerticalAlignment="Center" FontSize="14" Foreground="#34495E" Margin="0,0,15,0"/>
+                        <ComboBox x:Name="CmbQuality" Width="160" SelectedIndex="2" FontSize="14" Padding="5">
+                            <ComboBoxItem Content="Düşük (Hızlı)"/>
+                            <ComboBoxItem Content="Orta (Dengeli)"/>
+                            <ComboBoxItem Content="Yüksek (Önerilen)"/>
+                            <ComboBoxItem Content="Ultra (Büyük Dosya Boyutu)"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <CheckBox x:Name="ChkSifrele" Content="🔒 Çıktı PDF'lerini Şifrele:" VerticalAlignment="Center" FontSize="14" Foreground="#34495E" Click="ChkSifrele_Click"/>
+                        <TextBox x:Name="TxtSifre" Width="120" Margin="10,0,0,0" Padding="2" IsEnabled="False" Background="#E0E0E0" ToolTip="PDF'i açmak için istenecek şifre"/>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </Border>

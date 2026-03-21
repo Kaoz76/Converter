@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics; // YENİ: Kronometre (Stopwatch) için eklendi
 using System.IO;
 using System.Media;
 using System.Text.Json;
@@ -98,6 +99,7 @@ namespace TurboConverter
         {
             TxtDurumMetni.Text = "İşleniyor...";
             ProgressBarIlerleme.Value = 0;
+            TxtIlerlemeYuzdesi.Text = "Hesaplanıyor...";
             BtnOpenFolder.Visibility = Visibility.Collapsed;
             
             BtnCancel.Visibility = Visibility.Visible;
@@ -139,6 +141,9 @@ namespace TurboConverter
             _cancellationTokenSource = new CancellationTokenSource();
             var token = _cancellationTokenSource.Token;
 
+            // YENİ: Kronometreyi başlat
+            Stopwatch sw = Stopwatch.StartNew();
+
             try
             {
                 await Task.Run(() =>
@@ -156,26 +161,29 @@ namespace TurboConverter
                                 else if (RbPdfToText.IsChecked == true) ConvertPdfToText(file, _sonCiktiKlasoru, token);
                                 else if (RbPdfSplit.IsChecked == true) SplitPdf(file, _sonCiktiKlasoru, token);
                             }
-                            UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya);
+                            
+                            // Kronometreyi UIGuncelle metoduna gönderiyoruz
+                            UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
                     }
                     else if (RbImgToPdf.IsChecked == true)
                     {
                         ConvertImagesToPdf(tumDosyalar, _sonCiktiKlasoru, token);
-                        UIGuncelle(toplamDosya, toplamDosya);
+                        UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
                     else if (RbTextToPdf.IsChecked == true)
                     {
                         ConvertTextToPdf(tumDosyalar, _sonCiktiKlasoru, token);
-                        UIGuncelle(toplamDosya, toplamDosya);
+                        UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
                     else if (RbPdfMerge.IsChecked == true)
                     {
                         MergePdfs(tumDosyalar, _sonCiktiKlasoru, token);
-                        UIGuncelle(toplamDosya, toplamDosya);
+                        UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
                 }, token);
 
+                sw.Stop();
                 TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
                 BtnOpenFolder.Visibility = Visibility.Visible;
                 SystemSounds.Asterisk.Play(); 
@@ -183,6 +191,7 @@ namespace TurboConverter
             }
             catch (OperationCanceledException)
             {
+                sw.Stop();
                 TxtDurumMetni.Text = "İşlem İptal Edildi veya Şifre Atlandı!";
                 TxtIlerlemeYuzdesi.Text = "İptal Edildi";
                 SystemSounds.Exclamation.Play(); 
@@ -190,6 +199,7 @@ namespace TurboConverter
             }
             catch (Exception ex)
             {
+                sw.Stop();
                 TxtDurumMetni.Text = "Bir hata oluştu!";
                 SystemSounds.Hand.Play(); 
                 MessageBox.Show($"Beklenmeyen bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -206,7 +216,7 @@ namespace TurboConverter
         }
 
         // ==========================================
-        // YENİ: DİNAMİK ŞİFRE İSTEME EKRANI
+        // DİNAMİK ŞİFRE İSTEME EKRANI
         // ==========================================
         private string SifreIste(string dosyaAdi)
         {
@@ -246,9 +256,6 @@ namespace TurboConverter
             return girilenSifre;
         }
 
-        // ==========================================
-        // YENİ: ÇIKTILARA ŞİFRE UYGULAMA METODU
-        // ==========================================
         private void CiktiyiSifrele(string pdfPath)
         {
             bool sifreleAktif = false;
@@ -278,9 +285,6 @@ namespace TurboConverter
             }
         }
 
-        // ==========================================
-        // GÜVENLİ OKUMA (HATA YAKALAYICILAR)
-        // ==========================================
         private IDocReader GetDocReaderSafe(string pdfPath, double scaleFactor)
         {
             try
@@ -310,13 +314,12 @@ namespace TurboConverter
         }
 
         // ==========================================
-        // DÖNÜŞTÜRME İŞLEMLERİ 
+        // DÖNÜŞTÜRME İŞLEMLERİ
         // ==========================================
         private void ConvertPdfToJpg(string pdfPath, string outputFolder, double scaleFactor, CancellationToken token)
         {
             try
             {
-                
                 using var docReader = GetDocReaderSafe(pdfPath, scaleFactor);
                 int pageCount = docReader.GetPageCount();
 
@@ -370,7 +373,6 @@ namespace TurboConverter
                     }
                 }).GeneratePdf(outputPdfPath);
                 
-                // Şifreleme ayarı açıksa PDF'i şifrele
                 CiktiyiSifrele(outputPdfPath);
             }
             catch (OperationCanceledException) { throw; }
@@ -504,13 +506,41 @@ namespace TurboConverter
             catch (Exception ex) { MessageBox.Show($"PDF Birleştirme Hatası: {ex.Message}"); }
         }
 
-        private void UIGuncelle(int current, int total)
+        // ==========================================
+        // YENİ: KRONOMETRELİ UI GÜNCELLEMESİ
+        // ==========================================
+        private void UIGuncelle(int current, int total, Stopwatch sw)
         {
             Dispatcher.Invoke(() =>
             {
                 double yuzde = ((double)current / total) * 100;
                 ProgressBarIlerleme.Value = yuzde;
-                TxtIlerlemeYuzdesi.Text = $"%{yuzde:F0} - ({current} / {total} Dosya)";
+
+                string kalanMetin = "";
+
+                // Süre hesaplaması
+                if (current > 0 && current < total)
+                {
+                    double gecenSaniye = sw.Elapsed.TotalSeconds;
+                    double dosyaBasinaSure = gecenSaniye / current; 
+                    double tahminiKalanSaniye = dosyaBasinaSure * (total - current);
+
+                    if (tahminiKalanSaniye > 60)
+                    {
+                        TimeSpan ts = TimeSpan.FromSeconds(tahminiKalanSaniye);
+                        kalanMetin = $" | Kalan Süre: {ts.Minutes} dk {ts.Seconds} sn";
+                    }
+                    else if (tahminiKalanSaniye > 0)
+                    {
+                        kalanMetin = $" | Kalan Süre: {Math.Ceiling(tahminiKalanSaniye)} sn";
+                    }
+                }
+                else if (current == total)
+                {
+                    kalanMetin = " | Tamamlandı!";
+                }
+
+                TxtIlerlemeYuzdesi.Text = $"%{yuzde:F0} - ({current} / {total} Dosya){kalanMetin}";
             });
         }
 
@@ -585,7 +615,7 @@ namespace TurboConverter
                     {
                         CmbQuality.SelectedIndex = ayarlar.SeciliKalite;
                         ChkSifrele.IsChecked = ayarlar.SifreleAktif;
-                        ChkSifrele_Click(null, null); // Kutucuk arka planını güncelle
+                        ChkSifrele_Click(null, null);
 
                         switch (ayarlar.SeciliMod)
                         {

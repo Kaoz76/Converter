@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics; // YENİ: Kronometre (Stopwatch) için eklendi
+using System.Diagnostics;
 using System.IO;
 using System.Media;
 using System.Text.Json;
@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Win32;
 using Docnet.Core;
 using Docnet.Core.Models;
@@ -41,11 +42,45 @@ namespace TurboConverter
             base.OnClosing(e);
         }
 
+        // ==========================================
+        // YENİ: KARANLIK MOD YÖNETİMİ
+        // ==========================================
+        private void ToggleTheme_Click(object sender, RoutedEventArgs e)
+        {
+            SetTheme(ToggleTheme.IsChecked == true);
+        }
+
+        private void SetTheme(bool isDark)
+        {
+            var bgBrush = (SolidColorBrush)this.Resources["BgBrush"];
+            var panelBgBrush = (SolidColorBrush)this.Resources["PanelBgBrush"];
+            var textMainBrush = (SolidColorBrush)this.Resources["TextMainBrush"];
+            var textMutedBrush = (SolidColorBrush)this.Resources["TextMutedBrush"];
+            var borderBrushColor = (SolidColorBrush)this.Resources["BorderBrushColor"];
+
+            if (isDark)
+            {
+                bgBrush.Color = (Color)ColorConverter.ConvertFromString("#121212");
+                panelBgBrush.Color = (Color)ColorConverter.ConvertFromString("#1E1E1E");
+                textMainBrush.Color = (Color)ColorConverter.ConvertFromString("#E0E0E0");
+                textMutedBrush.Color = (Color)ColorConverter.ConvertFromString("#AAAAAA");
+                borderBrushColor.Color = (Color)ColorConverter.ConvertFromString("#333333");
+                ToggleTheme.Content = "☀️ Aydınlık Mod";
+            }
+            else
+            {
+                bgBrush.Color = (Color)ColorConverter.ConvertFromString("#F8F9FA");
+                panelBgBrush.Color = Colors.White;
+                textMainBrush.Color = (Color)ColorConverter.ConvertFromString("#2C3E50");
+                textMutedBrush.Color = (Color)ColorConverter.ConvertFromString("#7F8C8D");
+                borderBrushColor.Color = (Color)ColorConverter.ConvertFromString("#E0E0E0");
+                ToggleTheme.Content = "🌙 Karanlık Mod";
+            }
+        }
+
         private void ChkSifrele_Click(object sender, RoutedEventArgs e)
         {
             TxtSifre.IsEnabled = ChkSifrele.IsChecked == true;
-            if (TxtSifre.IsEnabled) TxtSifre.Background = System.Windows.Media.Brushes.White;
-            else TxtSifre.Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#E0E0E0");
         }
 
         private async void BtnSelectFiles_Click(object sender, RoutedEventArgs e)
@@ -69,7 +104,7 @@ namespace TurboConverter
         {
             if (!string.IsNullOrEmpty(_sonCiktiKlasoru) && Directory.Exists(_sonCiktiKlasoru))
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo() { FileName = _sonCiktiKlasoru, UseShellExecute = true, Verb = "open" });
+                Process.Start(new ProcessStartInfo() { FileName = _sonCiktiKlasoru, UseShellExecute = true, Verb = "open" });
             }
             else
             {
@@ -141,7 +176,6 @@ namespace TurboConverter
             _cancellationTokenSource = new CancellationTokenSource();
             var token = _cancellationTokenSource.Token;
 
-            // YENİ: Kronometreyi başlat
             Stopwatch sw = Stopwatch.StartNew();
 
             try
@@ -161,8 +195,6 @@ namespace TurboConverter
                                 else if (RbPdfToText.IsChecked == true) ConvertPdfToText(file, _sonCiktiKlasoru, token);
                                 else if (RbPdfSplit.IsChecked == true) SplitPdf(file, _sonCiktiKlasoru, token);
                             }
-                            
-                            // Kronometreyi UIGuncelle metoduna gönderiyoruz
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
                     }
@@ -215,9 +247,6 @@ namespace TurboConverter
             }
         }
 
-        // ==========================================
-        // DİNAMİK ŞİFRE İSTEME EKRANI
-        // ==========================================
         private string SifreIste(string dosyaAdi)
         {
             string girilenSifre = string.Empty;
@@ -313,9 +342,6 @@ namespace TurboConverter
             }
         }
 
-        // ==========================================
-        // DÖNÜŞTÜRME İŞLEMLERİ
-        // ==========================================
         private void ConvertPdfToJpg(string pdfPath, string outputFolder, double scaleFactor, CancellationToken token)
         {
             try
@@ -357,7 +383,7 @@ namespace TurboConverter
 
             try
             {
-                Document.Create(container =>
+                QuestPDF.Fluent.Document.Create(container =>
                 {
                     foreach (var imgPath in imageFiles)
                     {
@@ -417,7 +443,7 @@ namespace TurboConverter
 
             try
             {
-                Document.Create(container =>
+                QuestPDF.Fluent.Document.Create(container =>
                 {
                     foreach (var txtPath in textFiles)
                     {
@@ -506,9 +532,6 @@ namespace TurboConverter
             catch (Exception ex) { MessageBox.Show($"PDF Birleştirme Hatası: {ex.Message}"); }
         }
 
-        // ==========================================
-        // YENİ: KRONOMETRELİ UI GÜNCELLEMESİ
-        // ==========================================
         private void UIGuncelle(int current, int total, Stopwatch sw)
         {
             Dispatcher.Invoke(() =>
@@ -517,8 +540,6 @@ namespace TurboConverter
                 ProgressBarIlerleme.Value = yuzde;
 
                 string kalanMetin = "";
-
-                // Süre hesaplaması
                 if (current > 0 && current < total)
                 {
                     double gecenSaniye = sw.Elapsed.TotalSeconds;
@@ -617,6 +638,9 @@ namespace TurboConverter
                         ChkSifrele.IsChecked = ayarlar.SifreleAktif;
                         ChkSifrele_Click(null, null);
 
+                        ToggleTheme.IsChecked = ayarlar.KaranlikModAktif;
+                        SetTheme(ayarlar.KaranlikModAktif); // Temayı uygula
+
                         switch (ayarlar.SeciliMod)
                         {
                             case 0: RbPdfToJpg.IsChecked = true; break;
@@ -643,6 +667,7 @@ namespace TurboConverter
                 {
                     SeciliKalite = CmbQuality.SelectedIndex,
                     SifreleAktif = ChkSifrele.IsChecked == true,
+                    KaranlikModAktif = ToggleTheme.IsChecked == true, // Temayı kaydet
                     SeciliMod = RbPdfToJpg.IsChecked == true ? 0 :
                                 RbImgToPdf.IsChecked == true ? 1 :
                                 RbPdfToText.IsChecked == true ? 2 :
@@ -666,5 +691,6 @@ namespace TurboConverter
         public int SeciliMod { get; set; } = 0; 
         public int SeciliKalite { get; set; } = 2; 
         public bool SifreleAktif { get; set; } = false;
+        public bool KaranlikModAktif { get; set; } = false; // YENİ: Tema tercihi
     }
 }

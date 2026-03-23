@@ -392,8 +392,19 @@ namespace TurboConverter
                         {
                             container.Page(page =>
                             {
+                                // 1. Sayfayı standart A4 boyutuna getiriyoruz
+                                page.Size(QuestPDF.Helpers.PageSizes.A4);
+                                
+                                // 2. Kenar boşluklarını sıfırlayıp arka planı beyaz yapıyoruz
                                 page.Margin(0);
-                                page.Content().Image(imgPath);
+                                page.PageColor(QuestPDF.Helpers.Colors.White);
+
+                                // 3. Resmi DİKEY ve YATAY eksende tam ortalayıp, orantısını bozmadan sayfaya sığdırıyoruz
+                                page.Content()
+                                    .AlignCenter()
+                                    .AlignMiddle()
+                                    .Image(imgPath)
+                                    .FitArea(); 
                             });
                         }
                     }
@@ -450,11 +461,23 @@ namespace TurboConverter
                         token.ThrowIfCancellationRequested();
                         if (Path.GetExtension(txtPath).ToLower() == ".txt")
                         {
-                            string content = File.ReadAllText(txtPath);
+                            
+                            string content = File.ReadAllText(txtPath); 
+
                             container.Page(page =>
                             {
                                 page.Margin(40);
-                                page.DefaultTextStyle(x => x.FontSize(12));
+                                page.PageColor(QuestPDF.Helpers.Colors.White);
+                                
+                               
+                                page.DefaultTextStyle(x => x
+                                    .FontSize(12)
+                                    .FontFamily("Segoe UI") 
+                                    .Fallback(f => f.FontFamily("Arial")) 
+                                    .Fallback(f => f.FontFamily("Tahoma")) 
+                                    .Fallback(f => f.FontFamily("Microsoft YaHei")) 
+                                );
+
                                 page.Content().Text(content);
                             });
                         }

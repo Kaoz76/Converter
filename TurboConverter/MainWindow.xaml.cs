@@ -353,16 +353,32 @@ namespace TurboConverter
                 {
                     token.ThrowIfCancellationRequested();
                     using var pageReader = docReader.GetPageReader(i);
+                    
                     var rawBytes = pageReader.GetImage();
                     var width = pageReader.GetPageWidth();
                     var height = pageReader.GetPageHeight();
 
+                    // 1. PDF'in ham (saydam arka planlı) halini okuyoruz
                     var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
                     using var skData = SKData.CreateCopy(rawBytes);
-                    using var image = SKImage.FromPixels(info, skData);
+                    using var pdfImage = SKImage.FromPixels(info, skData);
 
+                    // 2. YENİ: Bembeyaz ve pürüzsüz bir tuval (Canvas) oluşturuyoruz
+                    using var surface = SKSurface.Create(info);
+                    using var canvas = surface.Canvas;
+                    
+                    // 3. Arka planı saf beyaz ile doldur (Saydamlık kaynaklı siyahlaşmayı ve tırtıklanmayı önler)
+                    canvas.Clear(SKColors.White); 
+                    
+                    // 4. PDF görüntüsünü bu beyaz tuvalin üzerine en yüksek kalitede çiziyoruz
+                    canvas.DrawImage(pdfImage, 0, 0); 
+                    
+                    // 5. Birleştirilmiş son harika görüntüyü alıyoruz
+                    using var finalImage = surface.Snapshot();
+
+                    // Kalite çarpanına göre JPG sıkıştırma oranını belirliyoruz
                     int jpgQuality = (scaleFactor >= 4.0) ? 100 : 90;
-                    using var encodedData = image.Encode(SKEncodedImageFormat.Jpeg, jpgQuality);
+                    using var encodedData = finalImage.Encode(SKEncodedImageFormat.Jpeg, jpgQuality);
 
                     string fileName = $"{Path.GetFileNameWithoutExtension(pdfPath)}_Page_{i + 1}.jpg";
                     string outputFile = Path.Combine(outputFolder, fileName);
@@ -374,7 +390,6 @@ namespace TurboConverter
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"PDF Dönüştürme Hatası: {ex.Message}"); }
         }
-
         private void ConvertImagesToPdf(List<string> imageFiles, string outputFolder, CancellationToken token)
         {
             if (imageFiles.Count == 0) return;

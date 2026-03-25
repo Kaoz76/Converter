@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Media;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,6 +17,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
+using Docnet.Core.Readers;
 
 namespace TurboConverter
 {
@@ -25,7 +25,6 @@ namespace TurboConverter
     {
         private string _sonCiktiKlasoru = string.Empty;
         private CancellationTokenSource? _cancellationTokenSource;
-        private readonly string _ayarlarDosyaYolu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TurboConverter", "settings.json");
 
         public MainWindow()
         {
@@ -43,7 +42,7 @@ namespace TurboConverter
         }
 
         // ==========================================
-        // YENİ: KARANLIK MOD YÖNETİMİ
+        // ARAYÜZ (UI) VE TEMA ETKİLEŞİMLERİ
         // ==========================================
         private void ToggleTheme_Click(object sender, RoutedEventArgs e)
         {
@@ -52,28 +51,23 @@ namespace TurboConverter
 
         private void SetTheme(bool isDark)
         {
-            var bgBrush = (SolidColorBrush)this.Resources["BgBrush"];
-            var panelBgBrush = (SolidColorBrush)this.Resources["PanelBgBrush"];
-            var textMainBrush = (SolidColorBrush)this.Resources["TextMainBrush"];
-            var textMutedBrush = (SolidColorBrush)this.Resources["TextMutedBrush"];
-            var borderBrushColor = (SolidColorBrush)this.Resources["BorderBrushColor"];
-
             if (isDark)
             {
-                bgBrush.Color = (Color)ColorConverter.ConvertFromString("#121212");
-                panelBgBrush.Color = (Color)ColorConverter.ConvertFromString("#1E1E1E");
-                textMainBrush.Color = (Color)ColorConverter.ConvertFromString("#E0E0E0");
-                textMutedBrush.Color = (Color)ColorConverter.ConvertFromString("#AAAAAA");
-                borderBrushColor.Color = (Color)ColorConverter.ConvertFromString("#333333");
+                // Mevcut rengi değiştirmek yerine, yepyeni bir fırça (new SolidColorBrush) oluşturup kaynaklara atıyoruz
+                this.Resources["BgBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#121212"));
+                this.Resources["PanelBgBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#1E1E1E"));
+                this.Resources["TextMainBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#E0E0E0"));
+                this.Resources["TextMutedBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#AAAAAA"));
+                this.Resources["BorderBrushColor"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#333333"));
                 ToggleTheme.Content = "☀️ Aydınlık Mod";
             }
             else
             {
-                bgBrush.Color = (Color)ColorConverter.ConvertFromString("#F8F9FA");
-                panelBgBrush.Color = Colors.White;
-                textMainBrush.Color = (Color)ColorConverter.ConvertFromString("#2C3E50");
-                textMutedBrush.Color = (Color)ColorConverter.ConvertFromString("#7F8C8D");
-                borderBrushColor.Color = (Color)ColorConverter.ConvertFromString("#E0E0E0");
+                this.Resources["BgBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#F8F9FA"));
+                this.Resources["PanelBgBrush"] = new SolidColorBrush(System.Windows.Media.Colors.White);
+                this.Resources["TextMainBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#2C3E50"));
+                this.Resources["TextMutedBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#7F8C8D"));
+                this.Resources["BorderBrushColor"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#E0E0E0"));
                 ToggleTheme.Content = "🌙 Karanlık Mod";
             }
         }
@@ -130,17 +124,21 @@ namespace TurboConverter
             }
         }
 
+        // ==========================================
+        // ANA İŞLEM DÖNGÜSÜ
+        // ==========================================
         private async Task ProcessFilesAsync(string[] paths)
         {
             TxtDurumMetni.Text = "İşleniyor...";
             ProgressBarIlerleme.Value = 0;
             TxtIlerlemeYuzdesi.Text = "Hesaplanıyor...";
             BtnOpenFolder.Visibility = Visibility.Collapsed;
-            
+
             BtnCancel.Visibility = Visibility.Visible;
             BtnCancel.IsEnabled = true;
 
-            var tumDosyalar = ResolveFiles(paths);
+            // DİKKAT: Artık FileHelper kullanıyoruz
+            var tumDosyalar = FileHelper.ResolveFiles(paths);
             if (tumDosyalar.Count == 0)
             {
                 BtnCancel.Visibility = Visibility.Collapsed;
@@ -150,7 +148,7 @@ namespace TurboConverter
             int toplamDosya = tumDosyalar.Count;
             int islenenDosya = 0;
 
-            double kaliteCarpani = 2.0; 
+            double kaliteCarpani = 2.0;
             if (CmbQuality.SelectedIndex == 0) kaliteCarpani = 1.0;
             else if (CmbQuality.SelectedIndex == 1) kaliteCarpani = 2.0;
             else if (CmbQuality.SelectedIndex == 2) kaliteCarpani = 4.0;
@@ -165,12 +163,13 @@ namespace TurboConverter
 
             if (!string.IsNullOrEmpty(klasorAdi))
             {
-                _sonCiktiKlasoru = GetUniquePath(Path.Combine(firstFileDir, klasorAdi), true);
+                // DİKKAT: Artık FileHelper kullanıyoruz
+                _sonCiktiKlasoru = FileHelper.GetUniquePath(Path.Combine(firstFileDir, klasorAdi), true);
                 Directory.CreateDirectory(_sonCiktiKlasoru);
             }
             else
             {
-                _sonCiktiKlasoru = firstFileDir; 
+                _sonCiktiKlasoru = firstFileDir;
             }
 
             _cancellationTokenSource = new CancellationTokenSource();
@@ -218,7 +217,7 @@ namespace TurboConverter
                 sw.Stop();
                 TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
                 BtnOpenFolder.Visibility = Visibility.Visible;
-                SystemSounds.Asterisk.Play(); 
+                SystemSounds.Asterisk.Play();
                 MessageBox.Show("İşlem tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException)
@@ -226,14 +225,14 @@ namespace TurboConverter
                 sw.Stop();
                 TxtDurumMetni.Text = "İşlem İptal Edildi veya Şifre Atlandı!";
                 TxtIlerlemeYuzdesi.Text = "İptal Edildi";
-                SystemSounds.Exclamation.Play(); 
+                SystemSounds.Exclamation.Play();
                 MessageBox.Show("İşlem iptal edildi veya gerekli bir şifre girilmedi.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
                 sw.Stop();
                 TxtDurumMetni.Text = "Bir hata oluştu!";
-                SystemSounds.Hand.Play(); 
+                SystemSounds.Hand.Play();
                 MessageBox.Show($"Beklenmeyen bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -247,6 +246,9 @@ namespace TurboConverter
             }
         }
 
+        // ==========================================
+        // ŞİFRELEME VE GÜVENLİK
+        // ==========================================
         private string SifreIste(string dosyaAdi)
         {
             string girilenSifre = string.Empty;
@@ -255,7 +257,8 @@ namespace TurboConverter
                 Window dialog = new Window
                 {
                     Title = "Kilitli PDF Algılandı",
-                    Width = 400, Height = 180,
+                    Width = 400,
+                    Height = 180,
                     WindowStartupLocation = WindowStartupLocation.CenterScreen,
                     ResizeMode = ResizeMode.NoResize,
                     WindowStyle = WindowStyle.ToolWindow,
@@ -268,10 +271,12 @@ namespace TurboConverter
                 PasswordBox passBox = new PasswordBox { Padding = new Thickness(5) };
                 panel.Children.Add(passBox);
 
-                StackPanel btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 15, 0, 0) };
+                // DİKKAT: HorizontalAlignment.Right yerine System.Windows.HorizontalAlignment.Right yazıldı
+                StackPanel btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = System.Windows.HorizontalAlignment.Right, Margin = new Thickness(0, 15, 0, 0) };
+
                 Button btnCancel = new Button { Content = "İptal Et", Width = 80, Padding = new Thickness(5), Margin = new Thickness(0, 0, 10, 0) };
                 btnCancel.Click += (s, e) => { dialog.DialogResult = false; };
-                
+
                 Button btnOk = new Button { Content = "Kilidi Aç", Width = 80, Padding = new Thickness(5), IsDefault = true, Background = System.Windows.Media.Brushes.LightBlue };
                 btnOk.Click += (s, e) => { girilenSifre = passBox.Password; dialog.DialogResult = true; };
 
@@ -279,7 +284,7 @@ namespace TurboConverter
                 btnPanel.Children.Add(btnOk);
                 panel.Children.Add(btnPanel);
                 dialog.Content = panel;
-                
+
                 dialog.ShowDialog();
             });
             return girilenSifre;
@@ -342,6 +347,9 @@ namespace TurboConverter
             }
         }
 
+        // ==========================================
+        // DÖNÜŞTÜRME MOTORLARI (PDF, RESİM, METİN)
+        // ==========================================
         private void ConvertPdfToJpg(string pdfPath, string outputFolder, double scaleFactor, CancellationToken token)
         {
             try
@@ -353,30 +361,23 @@ namespace TurboConverter
                 {
                     token.ThrowIfCancellationRequested();
                     using var pageReader = docReader.GetPageReader(i);
-                    
+
                     var rawBytes = pageReader.GetImage();
                     var width = pageReader.GetPageWidth();
                     var height = pageReader.GetPageHeight();
 
-                    // 1. PDF'in ham (saydam arka planlı) halini okuyoruz
                     var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
                     using var skData = SKData.CreateCopy(rawBytes);
                     using var pdfImage = SKImage.FromPixels(info, skData);
 
-                    // 2. YENİ: Bembeyaz ve pürüzsüz bir tuval (Canvas) oluşturuyoruz
+                    // Saydam (transparent) arka planlar için beyaz tuval
                     using var surface = SKSurface.Create(info);
                     using var canvas = surface.Canvas;
-                    
-                    // 3. Arka planı saf beyaz ile doldur (Saydamlık kaynaklı siyahlaşmayı ve tırtıklanmayı önler)
-                    canvas.Clear(SKColors.White); 
-                    
-                    // 4. PDF görüntüsünü bu beyaz tuvalin üzerine en yüksek kalitede çiziyoruz
-                    canvas.DrawImage(pdfImage, 0, 0); 
-                    
-                    // 5. Birleştirilmiş son harika görüntüyü alıyoruz
+                    canvas.Clear(SKColors.White);
+                    canvas.DrawImage(pdfImage, 0, 0);
+
                     using var finalImage = surface.Snapshot();
 
-                    // Kalite çarpanına göre JPG sıkıştırma oranını belirliyoruz
                     int jpgQuality = (scaleFactor >= 4.0) ? 100 : 90;
                     using var encodedData = finalImage.Encode(SKEncodedImageFormat.Jpeg, jpgQuality);
 
@@ -390,11 +391,13 @@ namespace TurboConverter
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"PDF Dönüştürme Hatası: {ex.Message}"); }
         }
+
         private void ConvertImagesToPdf(List<string> imageFiles, string outputFolder, CancellationToken token)
         {
             if (imageFiles.Count == 0) return;
+            // DİKKAT: Artık FileHelper kullanıyoruz
             string basePdfPath = Path.Combine(outputFolder, "Merged_Images.pdf");
-            string outputPdfPath = GetUniquePath(basePdfPath, false); 
+            string outputPdfPath = FileHelper.GetUniquePath(basePdfPath, false);
 
             try
             {
@@ -403,28 +406,24 @@ namespace TurboConverter
                     foreach (var imgPath in imageFiles)
                     {
                         token.ThrowIfCancellationRequested();
-                        if (IsImageFile(imgPath))
+                        if (FileHelper.IsImageFile(imgPath))
                         {
                             container.Page(page =>
                             {
-                                // 1. Sayfayı standart A4 boyutuna getiriyoruz
                                 page.Size(QuestPDF.Helpers.PageSizes.A4);
-                                
-                                // 2. Kenar boşluklarını sıfırlayıp arka planı beyaz yapıyoruz
                                 page.Margin(0);
                                 page.PageColor(QuestPDF.Helpers.Colors.White);
 
-                                // 3. Resmi DİKEY ve YATAY eksende tam ortalayıp, orantısını bozmadan sayfaya sığdırıyoruz
                                 page.Content()
                                     .AlignCenter()
                                     .AlignMiddle()
                                     .Image(imgPath)
-                                    .FitArea(); 
+                                    .FitArea();
                             });
                         }
                     }
                 }).GeneratePdf(outputPdfPath);
-                
+
                 CiktiyiSifrele(outputPdfPath);
             }
             catch (OperationCanceledException) { throw; }
@@ -439,7 +438,7 @@ namespace TurboConverter
                 int pageCount = docReader.GetPageCount();
 
                 string baseOutput = Path.Combine(outputFolder, $"{Path.GetFileNameWithoutExtension(pdfPath)}.txt");
-                string outputFile = GetUniquePath(baseOutput, false);
+                string outputFile = FileHelper.GetUniquePath(baseOutput, false);
 
                 using var writer = new StreamWriter(outputFile);
 
@@ -447,7 +446,7 @@ namespace TurboConverter
                 {
                     token.ThrowIfCancellationRequested();
                     using var pageReader = docReader.GetPageReader(i);
-                    
+
                     string text = pageReader.GetText();
                     if (!string.IsNullOrWhiteSpace(text))
                     {
@@ -465,7 +464,7 @@ namespace TurboConverter
         {
             if (textFiles.Count == 0) return;
             string basePdfPath = Path.Combine(outputFolder, "Merged_Texts.pdf");
-            string outputPdfPath = GetUniquePath(basePdfPath, false);
+            string outputPdfPath = FileHelper.GetUniquePath(basePdfPath, false);
 
             try
             {
@@ -476,21 +475,19 @@ namespace TurboConverter
                         token.ThrowIfCancellationRequested();
                         if (Path.GetExtension(txtPath).ToLower() == ".txt")
                         {
-                            
-                            string content = File.ReadAllText(txtPath); 
+                            string content = File.ReadAllText(txtPath);
 
                             container.Page(page =>
                             {
                                 page.Margin(40);
                                 page.PageColor(QuestPDF.Helpers.Colors.White);
-                                
-                               
+
                                 page.DefaultTextStyle(x => x
                                     .FontSize(12)
-                                    .FontFamily("Segoe UI") 
-                                    .Fallback(f => f.FontFamily("Arial")) 
-                                    .Fallback(f => f.FontFamily("Tahoma")) 
-                                    .Fallback(f => f.FontFamily("Microsoft YaHei")) 
+                                    .FontFamily("Segoe UI")
+                                    .Fallback(f => f.FontFamily("Arial"))
+                                    .Fallback(f => f.FontFamily("Tahoma"))
+                                    .Fallback(f => f.FontFamily("Microsoft YaHei"))
                                 );
 
                                 page.Content().Text(content);
@@ -534,14 +531,14 @@ namespace TurboConverter
 
         private void MergePdfs(List<string> pdfFiles, string outputFolder, CancellationToken token)
         {
-            if (pdfFiles.Count < 2) 
-            { 
+            if (pdfFiles.Count < 2)
+            {
                 Dispatcher.Invoke(() => MessageBox.Show("Birleştirme işlemi için en az 2 adet PDF dosyası seçmelisiniz."));
-                return; 
+                return;
             }
 
             string basePdfPath = Path.Combine(outputFolder, "Merged_Documents.pdf");
-            string outputPath = GetUniquePath(basePdfPath, false);
+            string outputPath = FileHelper.GetUniquePath(basePdfPath, false);
 
             try
             {
@@ -581,7 +578,7 @@ namespace TurboConverter
                 if (current > 0 && current < total)
                 {
                     double gecenSaniye = sw.Elapsed.TotalSeconds;
-                    double dosyaBasinaSure = gecenSaniye / current; 
+                    double dosyaBasinaSure = gecenSaniye / current;
                     double tahminiKalanSaniye = dosyaBasinaSure * (total - current);
 
                     if (tahminiKalanSaniye > 60)
@@ -603,132 +600,48 @@ namespace TurboConverter
             });
         }
 
-        private List<string> ResolveFiles(string[] paths)
-        {
-            var liste = new List<string>();
-            foreach (var path in paths)
-            {
-                if (Directory.Exists(path))
-                {
-                    string[] directoryFiles = Directory.GetFiles(path, "*.*", SearchOption.TopDirectoryOnly);
-                    liste.AddRange(directoryFiles);
-                }
-                else if (File.Exists(path))
-                {
-                    liste.Add(path);
-                }
-            }
-            return liste;
-        }
-
-        private bool IsImageFile(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return false;
-            var ext = Path.GetExtension(path).ToLower();
-            return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".bmp";
-        }
-
-        private string GetUniquePath(string path, bool isDirectory)
-        {
-            if (isDirectory)
-            {
-                if (!Directory.Exists(path)) return path;
-                int count = 1;
-                string dir = Path.GetDirectoryName(path) ?? string.Empty;
-                string name = Path.GetFileName(path);
-                string newPath;
-                do
-                {
-                    newPath = Path.Combine(dir, $"{name} ({count})");
-                    count++;
-                } while (Directory.Exists(newPath));
-                return newPath;
-            }
-            else
-            {
-                if (!File.Exists(path)) return path;
-                int count = 1;
-                string dir = Path.GetDirectoryName(path) ?? string.Empty;
-                string name = Path.GetFileNameWithoutExtension(path);
-                string ext = Path.GetExtension(path);
-                string newPath;
-                do
-                {
-                    newPath = Path.Combine(dir, $"{name} ({count}){ext}");
-                    count++;
-                } while (File.Exists(newPath));
-                return newPath;
-            }
-        }
-
+        // ==========================================
+        // AYARLARIN YÜKLENMESİ VE KAYDEDİLMESİ
+        // ==========================================
         private void AyarlariYukle()
         {
-            try
-            {
-                if (File.Exists(_ayarlarDosyaYolu))
-                {
-                    string json = File.ReadAllText(_ayarlarDosyaYolu);
-                    var ayarlar = JsonSerializer.Deserialize<AppSettings>(json);
-                    
-                    if (ayarlar != null)
-                    {
-                        CmbQuality.SelectedIndex = ayarlar.SeciliKalite;
-                        ChkSifrele.IsChecked = ayarlar.SifreleAktif;
-                        ChkSifrele_Click(null, null);
+            // DİKKAT: Artık SettingsManager kullanıyoruz
+            var ayarlar = SettingsManager.Yukle();
 
-                        ToggleTheme.IsChecked = ayarlar.KaranlikModAktif;
-                        SetTheme(ayarlar.KaranlikModAktif); // Temayı uygula
+            CmbQuality.SelectedIndex = ayarlar.SeciliKalite;
+            ChkSifrele.IsChecked = ayarlar.SifreleAktif;
+            ChkSifrele_Click(null, null);
 
-                        switch (ayarlar.SeciliMod)
-                        {
-                            case 0: RbPdfToJpg.IsChecked = true; break;
-                            case 1: RbImgToPdf.IsChecked = true; break;
-                            case 2: RbPdfToText.IsChecked = true; break;
-                            case 3: RbTextToPdf.IsChecked = true; break;
-                            case 4: RbPdfMerge.IsChecked = true; break;
-                            case 5: RbPdfSplit.IsChecked = true; break;
-                        }
-                    }
-                }
-            }
-            catch
+            ToggleTheme.IsChecked = ayarlar.KaranlikModAktif;
+            SetTheme(ayarlar.KaranlikModAktif);
+
+            switch (ayarlar.SeciliMod)
             {
-                System.Diagnostics.Debug.WriteLine("Ayarlar yüklenemedi.");
+                case 0: RbPdfToJpg.IsChecked = true; break;
+                case 1: RbImgToPdf.IsChecked = true; break;
+                case 2: RbPdfToText.IsChecked = true; break;
+                case 3: RbTextToPdf.IsChecked = true; break;
+                case 4: RbPdfMerge.IsChecked = true; break;
+                case 5: RbPdfSplit.IsChecked = true; break;
             }
         }
 
         private void AyarlariKaydet()
         {
-            try
+            var ayarlar = new AppSettings
             {
-                var ayarlar = new AppSettings
-                {
-                    SeciliKalite = CmbQuality.SelectedIndex,
-                    SifreleAktif = ChkSifrele.IsChecked == true,
-                    KaranlikModAktif = ToggleTheme.IsChecked == true, // Temayı kaydet
-                    SeciliMod = RbPdfToJpg.IsChecked == true ? 0 :
-                                RbImgToPdf.IsChecked == true ? 1 :
-                                RbPdfToText.IsChecked == true ? 2 :
-                                RbTextToPdf.IsChecked == true ? 3 :
-                                RbPdfMerge.IsChecked == true ? 4 : 5
-                };
+                SeciliKalite = CmbQuality.SelectedIndex,
+                SifreleAktif = ChkSifrele.IsChecked == true,
+                KaranlikModAktif = ToggleTheme.IsChecked == true,
+                SeciliMod = RbPdfToJpg.IsChecked == true ? 0 :
+                            RbImgToPdf.IsChecked == true ? 1 :
+                            RbPdfToText.IsChecked == true ? 2 :
+                            RbTextToPdf.IsChecked == true ? 3 :
+                            RbPdfMerge.IsChecked == true ? 4 : 5
+            };
 
-                Directory.CreateDirectory(Path.GetDirectoryName(_ayarlarDosyaYolu)!);
-                string json = JsonSerializer.Serialize(ayarlar);
-                File.WriteAllText(_ayarlarDosyaYolu, json);
-            }
-            catch
-            {
-                System.Diagnostics.Debug.WriteLine("Ayarlar kaydedilemedi.");
-            }
+            // DİKKAT: Artık SettingsManager kullanıyoruz
+            SettingsManager.Kaydet(ayarlar);
         }
-    }
-
-    public class AppSettings
-    {
-        public int SeciliMod { get; set; } = 0; 
-        public int SeciliKalite { get; set; } = 2; 
-        public bool SifreleAktif { get; set; } = false;
-        public bool KaranlikModAktif { get; set; } = false; // YENİ: Tema tercihi
     }
 }

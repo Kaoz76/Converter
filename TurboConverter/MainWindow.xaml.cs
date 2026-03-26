@@ -1,23 +1,16 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Media;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
-using Docnet.Core;
-using Docnet.Core.Models;
-using SkiaSharp;
-using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
-using PdfSharp.Pdf;
-using PdfSharp.Pdf.IO;
-using Docnet.Core.Readers;
+
+// YENİ: Motorlarımızın olduğu klasörü koda dahil ediyoruz
+using TurboConverter.PdfConverterEngine;
 
 namespace TurboConverter
 {
@@ -35,7 +28,7 @@ namespace TurboConverter
             AyarlariYukle();
         }
 
-        protected override void OnClosing(CancelEventArgs e)
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             AyarlariKaydet();
             base.OnClosing(e);
@@ -53,7 +46,6 @@ namespace TurboConverter
         {
             if (isDark)
             {
-                // Mevcut rengi değiştirmek yerine, yepyeni bir fırça (new SolidColorBrush) oluşturup kaynaklara atıyoruz
                 this.Resources["BgBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#121212"));
                 this.Resources["PanelBgBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#1E1E1E"));
                 this.Resources["TextMainBrush"] = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#E0E0E0"));
@@ -125,7 +117,7 @@ namespace TurboConverter
         }
 
         // ==========================================
-        // ANA İŞLEM DÖNGÜSÜ
+        // ANA İŞLEM DÖNGÜSÜ (KUMANDA MERKEZİ)
         // ==========================================
         private async Task ProcessFilesAsync(string[] paths)
         {
@@ -133,11 +125,9 @@ namespace TurboConverter
             ProgressBarIlerleme.Value = 0;
             TxtIlerlemeYuzdesi.Text = "Hesaplanıyor...";
             BtnOpenFolder.Visibility = Visibility.Collapsed;
-
             BtnCancel.Visibility = Visibility.Visible;
             BtnCancel.IsEnabled = true;
 
-            // DİKKAT: Artık FileHelper kullanıyoruz
             var tumDosyalar = FileHelper.ResolveFiles(paths);
             if (tumDosyalar.Count == 0)
             {
@@ -148,22 +138,30 @@ namespace TurboConverter
             int toplamDosya = tumDosyalar.Count;
             int islenenDosya = 0;
 
-            double kaliteCarpani = 2.0;
-            if (CmbQuality.SelectedIndex == 0) kaliteCarpani = 1.0;
-            else if (CmbQuality.SelectedIndex == 1) kaliteCarpani = 2.0;
-            else if (CmbQuality.SelectedIndex == 2) kaliteCarpani = 4.0;
-            else if (CmbQuality.SelectedIndex == 3) kaliteCarpani = 6.0;
+            // 1. Arayüzdeki verileri güvenli bir şekilde arka plana göndermek için paketliyoruz
+            int seciliMod = 0;
+            if (RbPdfToJpg.IsChecked == true) seciliMod = 0;
+            else if (RbImgToPdf.IsChecked == true) seciliMod = 1;
+            else if (RbPdfToText.IsChecked == true) seciliMod = 2;
+            else if (RbTextToPdf.IsChecked == true) seciliMod = 3;
+            else if (RbPdfMerge.IsChecked == true) seciliMod = 4;
+            else if (RbPdfSplit.IsChecked == true) seciliMod = 5;
 
+            double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
+                                   CmbQuality.SelectedIndex == 1 ? 2.0 :
+                                   CmbQuality.SelectedIndex == 2 ? 4.0 : 6.0;
+
+            bool sifreleAktif = ChkSifrele.IsChecked == true;
+            string sifre = TxtSifre.Text;
+
+            // 2. Klasör İsimlendirme
             string? firstFileDir = Path.GetDirectoryName(tumDosyalar[0]) ?? paths[0];
-
-            string klasorAdi = "";
-            if (RbPdfToJpg.IsChecked == true) klasorAdi = "Converted_Jpgs";
-            else if (RbPdfToText.IsChecked == true) klasorAdi = "Extracted_Texts";
-            else if (RbPdfSplit.IsChecked == true) klasorAdi = "Split_Pages";
+            string klasorAdi = seciliMod == 0 ? "Converted_Jpgs" :
+                               seciliMod == 2 ? "Extracted_Texts" :
+                               seciliMod == 5 ? "Split_Pages" : "";
 
             if (!string.IsNullOrEmpty(klasorAdi))
             {
-                // DİKKAT: Artık FileHelper kullanıyoruz
                 _sonCiktiKlasoru = FileHelper.GetUniquePath(Path.Combine(firstFileDir, klasorAdi), true);
                 Directory.CreateDirectory(_sonCiktiKlasoru);
             }
@@ -174,42 +172,42 @@ namespace TurboConverter
 
             _cancellationTokenSource = new CancellationTokenSource();
             var token = _cancellationTokenSource.Token;
-
             Stopwatch sw = Stopwatch.StartNew();
 
             try
             {
+                // 3. İlgili Motoru (Engine) Çalıştırma
                 await Task.Run(() =>
                 {
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
-                    if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfSplit.IsChecked == true)
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5) // Çoklu dosya işleyen modlar
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
                             token.ThrowIfCancellationRequested();
                             if (Path.GetExtension(file).ToLower() == ".pdf")
                             {
-                                if (RbPdfToJpg.IsChecked == true) ConvertPdfToJpg(file, _sonCiktiKlasoru, kaliteCarpani, token);
-                                else if (RbPdfToText.IsChecked == true) ConvertPdfToText(file, _sonCiktiKlasoru, token);
-                                else if (RbPdfSplit.IsChecked == true) SplitPdf(file, _sonCiktiKlasoru, token);
+                                if (seciliMod == 0) PdfToJpg.Convert(file, _sonCiktiKlasoru, kaliteCarpani, token);
+                                else if (seciliMod == 2) PdfToText.Convert(file, _sonCiktiKlasoru, token);
+                                else if (seciliMod == 5) PdfSplitMerge.Split(file, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                             }
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
                     }
-                    else if (RbImgToPdf.IsChecked == true)
+                    else if (seciliMod == 1) // Resimden PDF'e
                     {
-                        ConvertImagesToPdf(tumDosyalar, _sonCiktiKlasoru, token);
+                        ImgToPdf.Convert(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
-                    else if (RbTextToPdf.IsChecked == true)
+                    else if (seciliMod == 3) // Metinden PDF'e
                     {
-                        ConvertTextToPdf(tumDosyalar, _sonCiktiKlasoru, token);
+                        TextToPdf.Convert(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
-                    else if (RbPdfMerge.IsChecked == true)
+                    else if (seciliMod == 4) // PDF Birleştirme
                     {
-                        MergePdfs(tumDosyalar, _sonCiktiKlasoru, token);
+                        PdfSplitMerge.Merge(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
                 }, token);
@@ -247,326 +245,8 @@ namespace TurboConverter
         }
 
         // ==========================================
-        // ŞİFRELEME VE GÜVENLİK
+        // UI GÜNCELLEME VE AYARLAR
         // ==========================================
-        private string SifreIste(string dosyaAdi)
-        {
-            string girilenSifre = string.Empty;
-            Dispatcher.Invoke(() =>
-            {
-                Window dialog = new Window
-                {
-                    Title = "Kilitli PDF Algılandı",
-                    Width = 400,
-                    Height = 180,
-                    WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                    ResizeMode = ResizeMode.NoResize,
-                    WindowStyle = WindowStyle.ToolWindow,
-                    Background = System.Windows.Media.Brushes.WhiteSmoke
-                };
-
-                StackPanel panel = new StackPanel { Margin = new Thickness(20) };
-                panel.Children.Add(new TextBlock { Text = $"'{Path.GetFileName(dosyaAdi)}' şifre ile korunuyor.\nOkuyabilmemiz için parolayı girin:", Margin = new Thickness(0, 0, 0, 10), TextWrapping = TextWrapping.Wrap });
-
-                PasswordBox passBox = new PasswordBox { Padding = new Thickness(5) };
-                panel.Children.Add(passBox);
-
-                // DİKKAT: HorizontalAlignment.Right yerine System.Windows.HorizontalAlignment.Right yazıldı
-                StackPanel btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = System.Windows.HorizontalAlignment.Right, Margin = new Thickness(0, 15, 0, 0) };
-
-                Button btnCancel = new Button { Content = "İptal Et", Width = 80, Padding = new Thickness(5), Margin = new Thickness(0, 0, 10, 0) };
-                btnCancel.Click += (s, e) => { dialog.DialogResult = false; };
-
-                Button btnOk = new Button { Content = "Kilidi Aç", Width = 80, Padding = new Thickness(5), IsDefault = true, Background = System.Windows.Media.Brushes.LightBlue };
-                btnOk.Click += (s, e) => { girilenSifre = passBox.Password; dialog.DialogResult = true; };
-
-                btnPanel.Children.Add(btnCancel);
-                btnPanel.Children.Add(btnOk);
-                panel.Children.Add(btnPanel);
-                dialog.Content = panel;
-
-                dialog.ShowDialog();
-            });
-            return girilenSifre;
-        }
-
-        private void CiktiyiSifrele(string pdfPath)
-        {
-            bool sifreleAktif = false;
-            string sifre = string.Empty;
-
-            Dispatcher.Invoke(() =>
-            {
-                sifreleAktif = ChkSifrele.IsChecked == true;
-                sifre = TxtSifre.Text;
-            });
-
-            if (sifreleAktif && !string.IsNullOrWhiteSpace(sifre) && File.Exists(pdfPath))
-            {
-                try
-                {
-                    using (PdfDocument document = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify))
-                    {
-                        document.SecuritySettings.UserPassword = sifre;
-                        document.SecuritySettings.OwnerPassword = sifre;
-                        document.Save(pdfPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Çıktı şifreleme hatası: {ex.Message}");
-                }
-            }
-        }
-
-        private IDocReader GetDocReaderSafe(string pdfPath, double scaleFactor)
-        {
-            try
-            {
-                return DocLib.Instance.GetDocReader(pdfPath, new PageDimensions(scaleFactor));
-            }
-            catch (Exception)
-            {
-                string sifre = SifreIste(pdfPath);
-                if (string.IsNullOrEmpty(sifre)) throw new OperationCanceledException();
-                return DocLib.Instance.GetDocReader(pdfPath, sifre, new PageDimensions(scaleFactor));
-            }
-        }
-
-        private PdfDocument GetPdfDocumentSafe(string pdfPath)
-        {
-            try
-            {
-                return PdfReader.Open(pdfPath, PdfDocumentOpenMode.Import);
-            }
-            catch (PdfReaderException)
-            {
-                string sifre = SifreIste(pdfPath);
-                if (string.IsNullOrEmpty(sifre)) throw new OperationCanceledException();
-                return PdfReader.Open(pdfPath, sifre, PdfDocumentOpenMode.Import);
-            }
-        }
-
-        // ==========================================
-        // DÖNÜŞTÜRME MOTORLARI (PDF, RESİM, METİN)
-        // ==========================================
-        private void ConvertPdfToJpg(string pdfPath, string outputFolder, double scaleFactor, CancellationToken token)
-        {
-            try
-            {
-                using var docReader = GetDocReaderSafe(pdfPath, scaleFactor);
-                int pageCount = docReader.GetPageCount();
-
-                for (int i = 0; i < pageCount; i++)
-                {
-                    token.ThrowIfCancellationRequested();
-                    using var pageReader = docReader.GetPageReader(i);
-
-                    var rawBytes = pageReader.GetImage();
-                    var width = pageReader.GetPageWidth();
-                    var height = pageReader.GetPageHeight();
-
-                    var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-                    using var skData = SKData.CreateCopy(rawBytes);
-                    using var pdfImage = SKImage.FromPixels(info, skData);
-
-                    // Saydam (transparent) arka planlar için beyaz tuval
-                    using var surface = SKSurface.Create(info);
-                    using var canvas = surface.Canvas;
-                    canvas.Clear(SKColors.White);
-                    canvas.DrawImage(pdfImage, 0, 0);
-
-                    using var finalImage = surface.Snapshot();
-
-                    int jpgQuality = (scaleFactor >= 4.0) ? 100 : 90;
-                    using var encodedData = finalImage.Encode(SKEncodedImageFormat.Jpeg, jpgQuality);
-
-                    string fileName = $"{Path.GetFileNameWithoutExtension(pdfPath)}_Page_{i + 1}.jpg";
-                    string outputFile = Path.Combine(outputFolder, fileName);
-
-                    using var stream = File.OpenWrite(outputFile);
-                    encodedData.SaveTo(stream);
-                }
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"PDF Dönüştürme Hatası: {ex.Message}"); }
-        }
-
-        private void ConvertImagesToPdf(List<string> imageFiles, string outputFolder, CancellationToken token)
-        {
-            if (imageFiles.Count == 0) return;
-            // DİKKAT: Artık FileHelper kullanıyoruz
-            string basePdfPath = Path.Combine(outputFolder, "Merged_Images.pdf");
-            string outputPdfPath = FileHelper.GetUniquePath(basePdfPath, false);
-
-            try
-            {
-                QuestPDF.Fluent.Document.Create(container =>
-                {
-                    foreach (var imgPath in imageFiles)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        if (FileHelper.IsImageFile(imgPath))
-                        {
-                            container.Page(page =>
-                            {
-                                page.Size(QuestPDF.Helpers.PageSizes.A4);
-                                page.Margin(0);
-                                page.PageColor(QuestPDF.Helpers.Colors.White);
-
-                                page.Content()
-                                    .AlignCenter()
-                                    .AlignMiddle()
-                                    .Image(imgPath)
-                                    .FitArea();
-                            });
-                        }
-                    }
-                }).GeneratePdf(outputPdfPath);
-
-                CiktiyiSifrele(outputPdfPath);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { MessageBox.Show($"PDF Oluşturma Hatası: {ex.Message}"); }
-        }
-
-        private void ConvertPdfToText(string pdfPath, string outputFolder, CancellationToken token)
-        {
-            try
-            {
-                using var docReader = GetDocReaderSafe(pdfPath, 1.0);
-                int pageCount = docReader.GetPageCount();
-
-                string baseOutput = Path.Combine(outputFolder, $"{Path.GetFileNameWithoutExtension(pdfPath)}.txt");
-                string outputFile = FileHelper.GetUniquePath(baseOutput, false);
-
-                using var writer = new StreamWriter(outputFile);
-
-                for (int i = 0; i < pageCount; i++)
-                {
-                    token.ThrowIfCancellationRequested();
-                    using var pageReader = docReader.GetPageReader(i);
-
-                    string text = pageReader.GetText();
-                    if (!string.IsNullOrWhiteSpace(text))
-                    {
-                        writer.WriteLine($"--- Sayfa {i + 1} ---");
-                        writer.WriteLine(text);
-                        writer.WriteLine();
-                    }
-                }
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Metin Çıkarma Hatası: {ex.Message}"); }
-        }
-
-        private void ConvertTextToPdf(List<string> textFiles, string outputFolder, CancellationToken token)
-        {
-            if (textFiles.Count == 0) return;
-            string basePdfPath = Path.Combine(outputFolder, "Merged_Texts.pdf");
-            string outputPdfPath = FileHelper.GetUniquePath(basePdfPath, false);
-
-            try
-            {
-                QuestPDF.Fluent.Document.Create(container =>
-                {
-                    foreach (var txtPath in textFiles)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        if (Path.GetExtension(txtPath).ToLower() == ".txt")
-                        {
-                            string content = File.ReadAllText(txtPath);
-
-                            container.Page(page =>
-                            {
-                                page.Margin(40);
-                                page.PageColor(QuestPDF.Helpers.Colors.White);
-
-                                page.DefaultTextStyle(x => x
-                                    .FontSize(12)
-                                    .FontFamily("Segoe UI")
-                                    .Fallback(f => f.FontFamily("Arial"))
-                                    .Fallback(f => f.FontFamily("Tahoma"))
-                                    .Fallback(f => f.FontFamily("Microsoft YaHei"))
-                                );
-
-                                page.Content().Text(content);
-                            });
-                        }
-                    }
-                }).GeneratePdf(outputPdfPath);
-
-                CiktiyiSifrele(outputPdfPath);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { MessageBox.Show($"PDF Oluşturma Hatası: {ex.Message}"); }
-        }
-
-        private void SplitPdf(string pdfPath, string outputFolder, CancellationToken token)
-        {
-            try
-            {
-                using (PdfDocument inputDocument = GetPdfDocumentSafe(pdfPath))
-                {
-                    string name = Path.GetFileNameWithoutExtension(pdfPath);
-                    for (int idx = 0; idx < inputDocument.PageCount; idx++)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        string outputPath = Path.Combine(outputFolder, $"{name}_Sayfa_{idx + 1}.pdf");
-
-                        using (PdfDocument outputDocument = new PdfDocument())
-                        {
-                            outputDocument.Version = inputDocument.Version;
-                            outputDocument.Info.Title = $"Sayfa {idx + 1}";
-                            outputDocument.AddPage(inputDocument.Pages[idx]);
-                            outputDocument.Save(outputPath);
-                        }
-                        CiktiyiSifrele(outputPath);
-                    }
-                }
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"PDF Bölme Hatası: {ex.Message}"); }
-        }
-
-        private void MergePdfs(List<string> pdfFiles, string outputFolder, CancellationToken token)
-        {
-            if (pdfFiles.Count < 2)
-            {
-                Dispatcher.Invoke(() => MessageBox.Show("Birleştirme işlemi için en az 2 adet PDF dosyası seçmelisiniz."));
-                return;
-            }
-
-            string basePdfPath = Path.Combine(outputFolder, "Merged_Documents.pdf");
-            string outputPath = FileHelper.GetUniquePath(basePdfPath, false);
-
-            try
-            {
-                using (PdfDocument outputDocument = new PdfDocument())
-                {
-                    foreach (string file in pdfFiles)
-                    {
-                        if (Path.GetExtension(file).ToLower() != ".pdf") continue;
-
-                        token.ThrowIfCancellationRequested();
-                        using (PdfDocument inputDocument = GetPdfDocumentSafe(file))
-                        {
-                            int count = inputDocument.PageCount;
-                            for (int idx = 0; idx < count; idx++)
-                            {
-                                token.ThrowIfCancellationRequested();
-                                outputDocument.AddPage(inputDocument.Pages[idx]);
-                            }
-                        }
-                    }
-                    outputDocument.Save(outputPath);
-                }
-                CiktiyiSifrele(outputPath);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { MessageBox.Show($"PDF Birleştirme Hatası: {ex.Message}"); }
-        }
-
         private void UIGuncelle(int current, int total, Stopwatch sw)
         {
             Dispatcher.Invoke(() =>
@@ -600,12 +280,8 @@ namespace TurboConverter
             });
         }
 
-        // ==========================================
-        // AYARLARIN YÜKLENMESİ VE KAYDEDİLMESİ
-        // ==========================================
         private void AyarlariYukle()
         {
-            // DİKKAT: Artık SettingsManager kullanıyoruz
             var ayarlar = SettingsManager.Yukle();
 
             CmbQuality.SelectedIndex = ayarlar.SeciliKalite;
@@ -640,7 +316,6 @@ namespace TurboConverter
                             RbPdfMerge.IsChecked == true ? 4 : 5
             };
 
-            // DİKKAT: Artık SettingsManager kullanıyoruz
             SettingsManager.Kaydet(ayarlar);
         }
     }

@@ -56,7 +56,8 @@
                     <RadioButton x:Name="RbPdfToJpg" Content="PDF ➔ Resim (JPG)" IsChecked="True" GroupName="Mode"/>
                     <RadioButton x:Name="RbImgToPdf" Content="Resimler ➔ PDF" GroupName="Mode"/>
                     <RadioButton x:Name="RbPdfToText" Content="PDF ➔ Metin (TXT)" GroupName="Mode"/>
-                    <RadioButton x:Name="RbTextToPdf" Content="Metin (TXT) ➔ PDF" Margin="0,0,0,15" GroupName="Mode"/>
+                    <RadioButton x:Name="RbTextToPdf" Content="Metin (TXT) ➔ PDF" GroupName="Mode"/>
+                    <RadioButton x:Name="RbMdToPdf" Content="Markdown (MD) ➔ PDF" Margin="0,0,0,15" GroupName="Mode"/>
 
                     <TextBlock Text="PDF Araçları:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource TextMutedBrush}"/>
                     <RadioButton x:Name="RbPdfMerge" Content="Birden Fazla PDF'i Birleştir" GroupName="Mode"/>

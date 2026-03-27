@@ -77,6 +77,8 @@ namespace TurboConverter
                 dialog.Filter = "PDF Dosyaları (*.pdf)|*.pdf";
             else if (RbTextToPdf.IsChecked == true)
                 dialog.Filter = "Metin Dosyaları (*.txt)|*.txt";
+            else if (RbMdToPdf.IsChecked == true)
+                dialog.Filter = "Markdown Dosyaları (*.md)|*.md";
             else
                 dialog.Filter = "Resim Dosyaları|*.jpg;*.jpeg;*.png;*.webp;*.bmp";
 
@@ -146,6 +148,7 @@ namespace TurboConverter
             else if (RbTextToPdf.IsChecked == true) seciliMod = 3;
             else if (RbPdfMerge.IsChecked == true) seciliMod = 4;
             else if (RbPdfSplit.IsChecked == true) seciliMod = 5;
+            else if (RbMdToPdf.IsChecked == true) seciliMod = 6;
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -158,7 +161,8 @@ namespace TurboConverter
             string? firstFileDir = Path.GetDirectoryName(tumDosyalar[0]) ?? paths[0];
             string klasorAdi = seciliMod == 0 ? "Converted_Jpgs" :
                                seciliMod == 2 ? "Extracted_Texts" :
-                               seciliMod == 5 ? "Split_Pages" : "";
+                               seciliMod == 5 ? "Split_Pages" :
+                               seciliMod == 6 ? "Markdown_PDFs" : "";
 
             if (!string.IsNullOrEmpty(klasorAdi))
             {
@@ -208,6 +212,11 @@ namespace TurboConverter
                     else if (seciliMod == 4) // PDF Birleştirme
                     {
                         PdfSplitMerge.Merge(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
+                        UIGuncelle(toplamDosya, toplamDosya, sw);
+                    }
+                    else if (seciliMod == 6) // Markdown'dan PDF'e
+                    {
+                        MdToPdf.Convert(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
                 }, token);
@@ -299,6 +308,7 @@ namespace TurboConverter
                 case 3: RbTextToPdf.IsChecked = true; break;
                 case 4: RbPdfMerge.IsChecked = true; break;
                 case 5: RbPdfSplit.IsChecked = true; break;
+                case 6: RbMdToPdf.IsChecked = true; break;
             }
         }
 
@@ -313,7 +323,8 @@ namespace TurboConverter
                             RbImgToPdf.IsChecked == true ? 1 :
                             RbPdfToText.IsChecked == true ? 2 :
                             RbTextToPdf.IsChecked == true ? 3 :
-                            RbPdfMerge.IsChecked == true ? 4 : 5
+                            RbPdfMerge.IsChecked == true ? 4 :
+                            RbPdfSplit.IsChecked == true ? 5 : 6
             };
 
             SettingsManager.Kaydet(ayarlar);

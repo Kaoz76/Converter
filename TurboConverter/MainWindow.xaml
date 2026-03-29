@@ -1,9 +1,10 @@
 <Window x:Class="TurboConverter.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="TurboConverter - Gelişmiş Belge Aracı" Height="680" Width="850"
-        WindowStartupLocation="CenterScreen" Background="{DynamicResource BgBrush}"
-        Icon="/convert.ico">
+        Title="TurboConverter - Akıllı Belge Dönüştürücü" Height="650" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Icon="/convert.ico"
+        Background="{DynamicResource BgBrush}">
 
     <Window.Resources>
         <SolidColorBrush x:Key="BgBrush" Color="#F8F9FA"/>
@@ -11,125 +12,95 @@
         <SolidColorBrush x:Key="TextMainBrush" Color="#2C3E50"/>
         <SolidColorBrush x:Key="TextMutedBrush" Color="#7F8C8D"/>
         <SolidColorBrush x:Key="BorderBrushColor" Color="#E0E0E0"/>
-        
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
-        </Style>
-        <Style TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
-        </Style>
     </Window.Resources>
 
-    <Grid Margin="25">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="260"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,20">
-            <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="TurboConverter" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#3498DB"/>
-                <TextBlock Text="Hızlı, Güvenli ve Çevrimdışı Belge Yönetimi" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
-            </StackPanel>
-            <ToggleButton x:Name="ToggleTheme" Content="🌙 Karanlık Mod" HorizontalAlignment="Right" VerticalAlignment="Top" 
-                          Padding="10,5" Cursor="Hand" Click="ToggleTheme_Click" Background="{DynamicResource PanelBgBrush}" Foreground="{DynamicResource TextMainBrush}" BorderBrush="{DynamicResource BorderBrushColor}"/>
-        </Grid>
+        <Border Grid.Column="0" Background="{DynamicResource PanelBgBrush}" BorderBrush="{DynamicResource BorderBrushColor}" BorderThickness="0,0,1,0" Padding="20">
+            <StackPanel>
+                <TextBlock Text="TurboConverter" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMainBrush}" Margin="0,0,0,20" HorizontalAlignment="Center"/>
 
-        <Grid Grid.Row="1" Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="20"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+                <ToggleButton x:Name="ToggleTheme" Content="🌙 Karanlık Mod" Click="ToggleTheme_Click" Margin="0,0,0,25" Padding="8" Cursor="Hand"/>
 
-            <Border Grid.Column="0" Background="{DynamicResource PanelBgBrush}" CornerRadius="8" Padding="15" BorderBrush="{DynamicResource BorderBrushColor}" BorderThickness="1">
-                <StackPanel>
-                    <TextBlock Text="🛠️ İşlem Seçimi" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,15" Foreground="#3498DB"/>
-                    
-                    <TextBlock Text="Dönüştürme:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource TextMutedBrush}"/>
-                    <RadioButton x:Name="RbPdfToJpg" Content="PDF ➔ Resim (JPG)" IsChecked="True" GroupName="Mode"/>
-                    <RadioButton x:Name="RbImgToPdf" Content="Resimler ➔ PDF" GroupName="Mode"/>
-                    <RadioButton x:Name="RbPdfToText" Content="PDF ➔ Metin (TXT)" GroupName="Mode"/>
-                    <RadioButton x:Name="RbTextToPdf" Content="Metin (TXT) ➔ PDF" GroupName="Mode"/>
-                    <RadioButton x:Name="RbMdToPdf" Content="Markdown (MD) ➔ PDF" Margin="0,0,0,15" GroupName="Mode"/>
+                <TextBlock Text="Dönüştürme Modu" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
+                <RadioButton x:Name="RbPdfToJpg" Content="PDF ➔ Resim (JPG)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}" IsChecked="True"/>
+                <RadioButton x:Name="RbImgToPdf" Content="Resim ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfToText" Content="PDF ➔ Metin (TXT)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbTextToPdf" Content="Metin ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfMerge" Content="PDF Birleştir" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfSplit" Content="PDF Böl" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbMdToPdf" Content="Markdown (MD) ➔ PDF" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
 
-                    <TextBlock Text="PDF Araçları:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource TextMutedBrush}"/>
-                    <RadioButton x:Name="RbPdfMerge" Content="Birden Fazla PDF'i Birleştir" GroupName="Mode"/>
-                    <RadioButton x:Name="RbPdfSplit" Content="PDF'i Tekli Sayfalara Böl" GroupName="Mode"/>
-                </StackPanel>
-            </Border>
+                <TextBlock Text="Ayarlar" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
 
-            <Border Grid.Column="2" Background="{DynamicResource PanelBgBrush}" CornerRadius="8" Padding="15" BorderBrush="{DynamicResource BorderBrushColor}" BorderThickness="1">
-                <StackPanel>
-                    <TextBlock Text="⚙️ Çıktı Ayarları" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,15" Foreground="#3498DB"/>
-                    
-                    <TextBlock Text="Görüntü Kalitesi:" Margin="0,0,0,5" Foreground="{DynamicResource TextMainBrush}"/>
-                    <ComboBox x:Name="CmbQuality" SelectedIndex="2" FontSize="14" Padding="5" Margin="0,0,0,20" Background="{DynamicResource PanelBgBrush}" Foreground="Black">
-                        <ComboBoxItem Content="Düşük (Hızlı, Küçük Boyut)"/>
-                        <ComboBoxItem Content="Orta (Dengeli)"/>
-                        <ComboBoxItem Content="Yüksek (Önerilen Kalite)"/>
-                        <ComboBoxItem Content="Ultra (En Yüksek Çözünürlük)"/>
-                    </ComboBox>
+                <TextBlock Text="Görüntü Kalitesi (Çarpan):" Margin="0,0,0,5" Foreground="{DynamicResource TextMainBrush}"/>
+                <ComboBox x:Name="CmbQuality" Margin="0,0,0,15" Padding="5">
+                    <ComboBoxItem Content="Düşük (1x)"/>
+                    <ComboBoxItem Content="Normal (2x)" IsSelected="True"/>
+                    <ComboBoxItem Content="Yüksek (4x)"/>
+                    <ComboBoxItem Content="Çok Yüksek (6x)"/>
+                </ComboBox>
 
-                    <TextBlock Text="Güvenlik (İsteğe Bağlı):" Margin="0,0,0,5" Foreground="{DynamicResource TextMainBrush}"/>
-                    <CheckBox x:Name="ChkSifrele" Content="🔒 Oluşturulan PDF'leri Şifrele" Margin="0,0,0,10" Click="ChkSifrele_Click"/>
-                    <TextBox x:Name="TxtSifre" Padding="6" FontSize="14" IsEnabled="False" Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextMainBrush}" ToolTip="Belgeyi açmak için istenecek parola"/>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <Border Grid.Row="2" BorderBrush="#3498DB" BorderThickness="2" CornerRadius="12" Background="{DynamicResource PanelBgBrush}" AllowDrop="True" Drop="DropZone_Drop">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="📂" FontSize="64" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                <TextBlock x:Name="TxtDurumMetni" Text="İşlenecek Dosyaları Buraya Sürükleyin" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-                <TextBlock Text="veya" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-
-                <Button Content="Bilgisayardan Seç" Click="BtnSelectFiles_Click" Padding="30,12" Background="#3498DB" Foreground="White" FontSize="15" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
+                <CheckBox x:Name="ChkSifrele" Content="Çıktıyı Şifrele" Click="ChkSifrele_Click" Margin="0,0,0,8" Foreground="{DynamicResource TextMainBrush}"/>
+                <TextBox x:Name="TxtSifre" IsEnabled="False" Margin="0,0,0,10" Padding="6" />
             </StackPanel>
         </Border>
 
-        <StackPanel Grid.Row="3" Margin="0,20,0,0">
-            <ProgressBar x:Name="ProgressBarIlerleme" Height="22" Minimum="0" Maximum="100" Value="0" Foreground="#2ECC71">
-                <ProgressBar.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="4"/>
-                    </Style>
-                </ProgressBar.Resources>
-            </ProgressBar>
-            <TextBlock x:Name="TxtIlerlemeYuzdesi" Text="Hazır bekliyor..." HorizontalAlignment="Center" Margin="0,8,0,0" FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
+        <Grid Grid.Column="1" Margin="40">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
-                <Button x:Name="BtnOpenFolder" Content="📁 Sonuç Klasörünü Aç" Click="BtnOpenFolder_Click" Visibility="Collapsed" 
-                        Margin="10,0" Padding="25,12" Background="#2ECC71" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
+            <TextBlock Grid.Row="0" Text="İşlem Merkezine Hoş Geldiniz" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextMainBrush}" Margin="0,0,0,20"/>
 
-                <Button x:Name="BtnCancel" Content="✖ İşlemi İptal Et" Click="BtnCancel_Click" Visibility="Collapsed" 
-                        Margin="10,0" Padding="25,12" Background="#E74C3C" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
+            <Grid Grid.Row="1" Margin="0,10,0,30" AllowDrop="True" Drop="DropZone_Drop" DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave" Background="Transparent">
+
+                <Rectangle x:Name="DropZoneBackground" Fill="{DynamicResource PanelBgBrush}" RadiusX="16" RadiusY="16"/>
+                <Rectangle Stroke="#3498DB" StrokeThickness="3" StrokeDashArray="6,4" RadiusX="16" RadiusY="16"/>
+
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                    <TextBlock x:Name="DropIcon" Text="📂" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                    <TextBlock x:Name="TxtDropZoneMetni" Text="İşlenecek Dosyaları Buraya Sürükleyin" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10" HorizontalAlignment="Center" Foreground="{DynamicResource TextMainBrush}"/>
+                    <TextBlock Text="veya" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                    <Button Content="Bilgisayardan Seç" Click="BtnSelectFiles_Click" Padding="35,12" Background="#3498DB" Foreground="White" FontSize="16" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Grid.Row="2" Margin="0,10,0,0">
+                <TextBlock x:Name="TxtDurumMetni" Text="Bekleniyor..." FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextMainBrush}" Margin="0,0,0,8"/>
+                <ProgressBar x:Name="ProgressBarIlerleme" Height="22" Minimum="0" Maximum="100" Margin="0,0,0,8"/>
+                <TextBlock x:Name="TxtIlerlemeYuzdesi" Text="%0" FontSize="13" HorizontalAlignment="Right" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,15"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="BtnCancel" Content="İptal Et" Click="BtnCancel_Click" Visibility="Collapsed" Width="120" Padding="8" Margin="0,0,15,0" Background="#E74C3C" Foreground="White" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <Button x:Name="BtnOpenFolder" Content="📁 Çıktı Klasörünü Aç" Click="BtnOpenFolder_Click" Visibility="Collapsed" Width="180" Padding="10" Background="#2ECC71" Foreground="White" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
+        </Grid>
     </Grid>
 </Window>

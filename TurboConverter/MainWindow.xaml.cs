@@ -109,9 +109,30 @@ namespace TurboConverter
                 BtnCancel.IsEnabled = false;
             }
         }
+        private void DropZone_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#EAF2F8"));
+                DropIcon.Text = "📥";
+                
+                TxtDropZoneMetni.Text = "Şimdi Dosyaları Bırakın!";
+            }
+        }
+
+        private void DropZone_DragLeave(object sender, DragEventArgs e)
+        {
+            DropZoneBackground.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "PanelBgBrush");
+            DropIcon.Text = "📂";
+            
+            TxtDropZoneMetni.Text = "İşlenecek Dosyaları Buraya Sürükleyin";
+        }
 
         private async void DropZone_Drop(object sender, DragEventArgs e)
         {
+            DropZoneBackground.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "PanelBgBrush");
+            DropIcon.Text = "📂";
+            
             if (e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetData(DataFormats.FileDrop) is string[] dosyalar)
             {
                 await ProcessFilesAsync(dosyalar);

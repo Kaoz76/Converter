@@ -151,17 +151,23 @@ namespace TurboConverter
             BtnCancel.Visibility = Visibility.Visible;
             BtnCancel.IsEnabled = true;
 
+            // 1. İŞLEM BAŞLARKEN EKRANI "İŞLENİYOR" MODUNA AL
+            DropIcon.Text = "⚙️";
+            TxtDropZoneMetni.Text = "Dosyalar İşleniyor...";
+            DropZoneBackground.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "PanelBgBrush");
+
             var tumDosyalar = FileHelper.ResolveFiles(paths);
             if (tumDosyalar.Count == 0)
             {
                 BtnCancel.Visibility = Visibility.Collapsed;
+                DropIcon.Text = "📂";
+                TxtDropZoneMetni.Text = "İşlenecek Dosyaları Buraya Sürükleyin";
                 return;
             }
 
             int toplamDosya = tumDosyalar.Count;
             int islenenDosya = 0;
 
-            // 1. Arayüzdeki verileri güvenli bir şekilde arka plana göndermek için paketliyoruz
             int seciliMod = 0;
             if (RbPdfToJpg.IsChecked == true) seciliMod = 0;
             else if (RbImgToPdf.IsChecked == true) seciliMod = 1;
@@ -178,7 +184,6 @@ namespace TurboConverter
             bool sifreleAktif = ChkSifrele.IsChecked == true;
             string sifre = TxtSifre.Text;
 
-            // 2. Klasör İsimlendirme
             string? firstFileDir = Path.GetDirectoryName(tumDosyalar[0]) ?? paths[0];
             string klasorAdi = seciliMod == 0 ? "Converted_Jpgs" :
                                seciliMod == 2 ? "Extracted_Texts" :
@@ -201,12 +206,11 @@ namespace TurboConverter
 
             try
             {
-                // 3. İlgili Motoru (Engine) Çalıştırma
                 await Task.Run(() =>
                 {
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
-                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5) // Çoklu dosya işleyen modlar
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5)
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
@@ -220,22 +224,22 @@ namespace TurboConverter
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
                     }
-                    else if (seciliMod == 1) // Resimden PDF'e
+                    else if (seciliMod == 1)
                     {
                         ImgToPdf.Convert(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
-                    else if (seciliMod == 3) // Metinden PDF'e
+                    else if (seciliMod == 3)
                     {
                         TextToPdf.Convert(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
-                    else if (seciliMod == 4) // PDF Birleştirme
+                    else if (seciliMod == 4)
                     {
                         PdfSplitMerge.Merge(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
-                    else if (seciliMod == 6) // Markdown'dan PDF'e
+                    else if (seciliMod == 6)
                     {
                         MdToPdf.Convert(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
@@ -244,6 +248,12 @@ namespace TurboConverter
 
                 sw.Stop();
                 TxtDurumMetni.Text = "İşlem Başarıyla Tamamlandı!";
+
+                // 2. İŞLEM BAŞARIYLA BİTİNCE EKRANI "HAZIR" MODUNA AL
+                DropIcon.Text = "✅";
+                TxtDropZoneMetni.Text = "Dosyalarınız Hazır!";
+                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#E8F8F5")); // Tatlı bir açık yeşil
+
                 BtnOpenFolder.Visibility = Visibility.Visible;
                 SystemSounds.Asterisk.Play();
                 MessageBox.Show("İşlem tamamlandı.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -253,6 +263,12 @@ namespace TurboConverter
                 sw.Stop();
                 TxtDurumMetni.Text = "İşlem İptal Edildi veya Şifre Atlandı!";
                 TxtIlerlemeYuzdesi.Text = "İptal Edildi";
+
+                // 3. İPTAL DURUMUNDA EKRANI "UYARI" MODUNA AL
+                DropIcon.Text = "⚠️";
+                TxtDropZoneMetni.Text = "İşlem İptal Edildi";
+                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FEF9E7")); // Tatlı bir açık sarı
+
                 SystemSounds.Exclamation.Play();
                 MessageBox.Show("İşlem iptal edildi veya gerekli bir şifre girilmedi.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -260,6 +276,12 @@ namespace TurboConverter
             {
                 sw.Stop();
                 TxtDurumMetni.Text = "Bir hata oluştu!";
+
+                // 4. HATA DURUMUNDA EKRANI "HATA" MODUNA AL
+                DropIcon.Text = "❌";
+                TxtDropZoneMetni.Text = "Bir Hata Oluştu!";
+                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FDEDEC")); // Tatlı bir açık kırmızı
+
                 SystemSounds.Hand.Play();
                 MessageBox.Show($"Beklenmeyen bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }

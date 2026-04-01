@@ -9,7 +9,7 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using QuestPDF.Infrastructure;
 
-// YENİ: Motorlarımızın olduğu klasörü koda dahil ediyoruz
+// Motorlarımızın olduğu klasörü koda dahil ediyoruz
 using TurboConverter.PdfConverterEngine;
 
 namespace TurboConverter
@@ -73,7 +73,7 @@ namespace TurboConverter
         {
             OpenFileDialog dialog = new OpenFileDialog { Multiselect = true };
 
-            if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfMerge.IsChecked == true || RbPdfSplit.IsChecked == true)
+            if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfMerge.IsChecked == true || RbPdfSplit.IsChecked == true || RbPdfExtractImages.IsChecked == true)
                 dialog.Filter = "PDF Dosyaları (*.pdf)|*.pdf";
             else if (RbTextToPdf.IsChecked == true)
                 dialog.Filter = "Metin Dosyaları (*.txt)|*.txt";
@@ -109,13 +109,13 @@ namespace TurboConverter
                 BtnCancel.IsEnabled = false;
             }
         }
+
         private void DropZone_DragEnter(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#EAF2F8"));
                 DropIcon.Text = "📥";
-                
                 TxtDropZoneMetni.Text = "Şimdi Dosyaları Bırakın!";
             }
         }
@@ -124,7 +124,6 @@ namespace TurboConverter
         {
             DropZoneBackground.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "PanelBgBrush");
             DropIcon.Text = "📂";
-            
             TxtDropZoneMetni.Text = "İşlenecek Dosyaları Buraya Sürükleyin";
         }
 
@@ -132,7 +131,7 @@ namespace TurboConverter
         {
             DropZoneBackground.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "PanelBgBrush");
             DropIcon.Text = "📂";
-            
+
             if (e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetData(DataFormats.FileDrop) is string[] dosyalar)
             {
                 await ProcessFilesAsync(dosyalar);
@@ -176,6 +175,7 @@ namespace TurboConverter
             else if (RbPdfMerge.IsChecked == true) seciliMod = 4;
             else if (RbPdfSplit.IsChecked == true) seciliMod = 5;
             else if (RbMdToPdf.IsChecked == true) seciliMod = 6;
+            else if (RbPdfExtractImages.IsChecked == true) seciliMod = 7; // Eklendi
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -188,7 +188,8 @@ namespace TurboConverter
             string klasorAdi = seciliMod == 0 ? "Converted_Jpgs" :
                                seciliMod == 2 ? "Extracted_Texts" :
                                seciliMod == 5 ? "Split_Pages" :
-                               seciliMod == 6 ? "Markdown_PDFs" : "";
+                               seciliMod == 6 ? "Markdown_PDFs" :
+                               seciliMod == 7 ? "Extracted_Images" : ""; // Eklendi
 
             if (!string.IsNullOrEmpty(klasorAdi))
             {
@@ -210,7 +211,8 @@ namespace TurboConverter
                 {
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
-                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5)
+                    // Mod 7 (Extract Images) Çoklu PDF'leri işleyeceği için buraya eklendi
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7)
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
@@ -220,6 +222,7 @@ namespace TurboConverter
                                 if (seciliMod == 0) PdfToJpg.Convert(file, _sonCiktiKlasoru, kaliteCarpani, token);
                                 else if (seciliMod == 2) PdfToText.Convert(file, _sonCiktiKlasoru, token);
                                 else if (seciliMod == 5) PdfSplitMerge.Split(file, _sonCiktiKlasoru, sifreleAktif, sifre, token);
+                                else if (seciliMod == 7) PdfImageExtractor.Extract(file, _sonCiktiKlasoru, sifre, token); // Eklendi
                             }
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
@@ -252,7 +255,7 @@ namespace TurboConverter
                 // 2. İŞLEM BAŞARIYLA BİTİNCE EKRANI "HAZIR" MODUNA AL
                 DropIcon.Text = "✅";
                 TxtDropZoneMetni.Text = "Dosyalarınız Hazır!";
-                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#E8F8F5")); // Tatlı bir açık yeşil
+                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#E8F8F5"));
 
                 BtnOpenFolder.Visibility = Visibility.Visible;
                 SystemSounds.Asterisk.Play();
@@ -267,7 +270,7 @@ namespace TurboConverter
                 // 3. İPTAL DURUMUNDA EKRANI "UYARI" MODUNA AL
                 DropIcon.Text = "⚠️";
                 TxtDropZoneMetni.Text = "İşlem İptal Edildi";
-                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FEF9E7")); // Tatlı bir açık sarı
+                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FEF9E7"));
 
                 SystemSounds.Exclamation.Play();
                 MessageBox.Show("İşlem iptal edildi veya gerekli bir şifre girilmedi.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -280,7 +283,7 @@ namespace TurboConverter
                 // 4. HATA DURUMUNDA EKRANI "HATA" MODUNA AL
                 DropIcon.Text = "❌";
                 TxtDropZoneMetni.Text = "Bir Hata Oluştu!";
-                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FDEDEC")); // Tatlı bir açık kırmızı
+                DropZoneBackground.Fill = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FDEDEC"));
 
                 SystemSounds.Hand.Play();
                 MessageBox.Show($"Beklenmeyen bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -352,11 +355,13 @@ namespace TurboConverter
                 case 4: RbPdfMerge.IsChecked = true; break;
                 case 5: RbPdfSplit.IsChecked = true; break;
                 case 6: RbMdToPdf.IsChecked = true; break;
+                case 7: RbPdfExtractImages.IsChecked = true; break;
             }
         }
 
         private void AyarlariKaydet()
         {
+            // Buradaki syntax hatası (eksik noktalı virgüller ve bozuk bağlama) tamamen çözüldü
             var ayarlar = new AppSettings
             {
                 SeciliKalite = CmbQuality.SelectedIndex,
@@ -367,7 +372,9 @@ namespace TurboConverter
                             RbPdfToText.IsChecked == true ? 2 :
                             RbTextToPdf.IsChecked == true ? 3 :
                             RbPdfMerge.IsChecked == true ? 4 :
-                            RbPdfSplit.IsChecked == true ? 5 : 6
+                            RbPdfSplit.IsChecked == true ? 5 :
+                            RbMdToPdf.IsChecked == true ? 6 :
+                            RbPdfExtractImages.IsChecked == true ? 7 : 0
             };
 
             SettingsManager.Kaydet(ayarlar);

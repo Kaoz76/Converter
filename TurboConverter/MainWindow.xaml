@@ -33,7 +33,8 @@
                 <RadioButton x:Name="RbTextToPdf" Content="Metin ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbPdfMerge" Content="PDF Birleştir" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbPdfSplit" Content="PDF Böl" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
-                <RadioButton x:Name="RbMdToPdf" Content="Markdown (MD) ➔ PDF" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbMdToPdf" Content="Markdown (MD) ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfExtractImages" Content="PDF'ten Resimleri Ayıkla" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
 
                 <TextBlock Text="Ayarlar" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
 

@@ -175,7 +175,8 @@ namespace TurboConverter
             else if (RbPdfMerge.IsChecked == true) seciliMod = 4;
             else if (RbPdfSplit.IsChecked == true) seciliMod = 5;
             else if (RbMdToPdf.IsChecked == true) seciliMod = 6;
-            else if (RbPdfExtractImages.IsChecked == true) seciliMod = 7; // Eklendi
+            else if (RbPdfExtractImages.IsChecked == true) seciliMod = 7;
+            else if (RbImgToIco.IsChecked == true) seciliMod = 8;
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -189,7 +190,9 @@ namespace TurboConverter
                                seciliMod == 2 ? "Extracted_Texts" :
                                seciliMod == 5 ? "Split_Pages" :
                                seciliMod == 6 ? "Markdown_PDFs" :
-                               seciliMod == 7 ? "Extracted_Images" : ""; // Eklendi
+                               seciliMod == 7 ? "Extracted_Images" :
+                               seciliMod == 8 ? "Converted_Icons" : "";
+
 
             if (!string.IsNullOrEmpty(klasorAdi))
             {
@@ -245,6 +248,11 @@ namespace TurboConverter
                     else if (seciliMod == 6)
                     {
                         MdToPdf.Convert(tumDosyalar, _sonCiktiKlasoru, sifreleAktif, sifre, token);
+                        UIGuncelle(toplamDosya, toplamDosya, sw);
+                    }
+                    else if (seciliMod == 8)
+                    {
+                        ImgToIco.Convert(tumDosyalar.ToArray(), _sonCiktiKlasoru, token);
                         UIGuncelle(toplamDosya, toplamDosya, sw);
                     }
                 }, token);
@@ -356,6 +364,7 @@ namespace TurboConverter
                 case 5: RbPdfSplit.IsChecked = true; break;
                 case 6: RbMdToPdf.IsChecked = true; break;
                 case 7: RbPdfExtractImages.IsChecked = true; break;
+                case 8: RbImgToIco.IsChecked = true; break;
             }
         }
 
@@ -374,7 +383,8 @@ namespace TurboConverter
                             RbPdfMerge.IsChecked == true ? 4 :
                             RbPdfSplit.IsChecked == true ? 5 :
                             RbMdToPdf.IsChecked == true ? 6 :
-                            RbPdfExtractImages.IsChecked == true ? 7 : 0
+                            RbPdfExtractImages.IsChecked == true ? 7 :
+                            RbImgToIco.IsChecked == true ? 8 : 0
             };
 
             SettingsManager.Kaydet(ayarlar);

@@ -35,7 +35,8 @@
                 <RadioButton x:Name="RbPdfSplit" Content="PDF Böl" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbMdToPdf" Content="Markdown (MD) ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbPdfExtractImages" Content="PDF'ten Resimleri Ayıkla" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
-                <RadioButton x:Name="RbImgToIco" Content="Resim ➔ İkon (ICO)" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbImgToIco" Content="Resim ➔ İkon (ICO)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfRotate" Content="PDF Sayfalarını Döndür" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 
                 <TextBlock Text="Ayarlar" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
 
@@ -46,7 +47,12 @@
                     <ComboBoxItem Content="Yüksek (4x)"/>
                     <ComboBoxItem Content="Çok Yüksek (6x)"/>
                 </ComboBox>
-
+                <TextBlock Text="Dönüş Açısı:" Margin="0,0,0,5" Foreground="{DynamicResource TextMainBrush}"/>
+                <ComboBox x:Name="CmbRotateAngle" Margin="0,0,0,15" Padding="5">
+                    <ComboBoxItem Content="90° Sağ" IsSelected="True"/>
+                    <ComboBoxItem Content="180° Ters"/>
+                    <ComboBoxItem Content="90° Sol (270°)"/>
+                </ComboBox>
                 <CheckBox x:Name="ChkSifrele" Content="Çıktıyı Şifrele" Click="ChkSifrele_Click" Margin="0,0,0,8" Foreground="{DynamicResource TextMainBrush}"/>
                 <TextBox x:Name="TxtSifre" IsEnabled="False" Margin="0,0,0,10" Padding="6" />
             </StackPanel>

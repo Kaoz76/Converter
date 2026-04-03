@@ -73,7 +73,7 @@ namespace TurboConverter
         {
             OpenFileDialog dialog = new OpenFileDialog { Multiselect = true };
 
-            if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfMerge.IsChecked == true || RbPdfSplit.IsChecked == true || RbPdfExtractImages.IsChecked == true)
+            if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfMerge.IsChecked == true || RbPdfSplit.IsChecked == true || RbPdfExtractImages.IsChecked == true || RbPdfRotate.IsChecked == true)
                 dialog.Filter = "PDF Dosyaları (*.pdf)|*.pdf";
             else if (RbTextToPdf.IsChecked == true)
                 dialog.Filter = "Metin Dosyaları (*.txt)|*.txt";
@@ -177,6 +177,7 @@ namespace TurboConverter
             else if (RbMdToPdf.IsChecked == true) seciliMod = 6;
             else if (RbPdfExtractImages.IsChecked == true) seciliMod = 7;
             else if (RbImgToIco.IsChecked == true) seciliMod = 8;
+            else if (RbPdfRotate.IsChecked == true) seciliMod = 9;
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -185,13 +186,17 @@ namespace TurboConverter
             bool sifreleAktif = ChkSifrele.IsChecked == true;
             string sifre = TxtSifre.Text;
 
+            int donusAcisi = CmbRotateAngle.SelectedIndex == 0 ? 90 :
+                             CmbRotateAngle.SelectedIndex == 1 ? 180 : 270;
+
             string? firstFileDir = Path.GetDirectoryName(tumDosyalar[0]) ?? paths[0];
             string klasorAdi = seciliMod == 0 ? "Converted_Jpgs" :
                                seciliMod == 2 ? "Extracted_Texts" :
                                seciliMod == 5 ? "Split_Pages" :
                                seciliMod == 6 ? "Markdown_PDFs" :
                                seciliMod == 7 ? "Extracted_Images" :
-                               seciliMod == 8 ? "Converted_Icons" : "";
+                               seciliMod == 8 ? "Converted_Icons" : 
+                               seciliMod == 9 ? "Rotated_PDFs" : "";
 
 
             if (!string.IsNullOrEmpty(klasorAdi))
@@ -215,7 +220,7 @@ namespace TurboConverter
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
                     // Mod 7 (Extract Images) Çoklu PDF'leri işleyeceği için buraya eklendi
-                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7)
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9)
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
@@ -225,7 +230,8 @@ namespace TurboConverter
                                 if (seciliMod == 0) PdfToJpg.Convert(file, _sonCiktiKlasoru, kaliteCarpani, token);
                                 else if (seciliMod == 2) PdfToText.Convert(file, _sonCiktiKlasoru, token);
                                 else if (seciliMod == 5) PdfSplitMerge.Split(file, _sonCiktiKlasoru, sifreleAktif, sifre, token);
-                                else if (seciliMod == 7) PdfImageExtractor.Extract(file, _sonCiktiKlasoru, sifre, token); // Eklendi
+                                else if (seciliMod == 7) PdfImageExtractor.Extract(file, _sonCiktiKlasoru, sifre, token);
+                                else if (seciliMod == 9) PdfRotator.Rotate(file, _sonCiktiKlasoru, donusAcisi, token);
                             }
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
@@ -365,6 +371,7 @@ namespace TurboConverter
                 case 6: RbMdToPdf.IsChecked = true; break;
                 case 7: RbPdfExtractImages.IsChecked = true; break;
                 case 8: RbImgToIco.IsChecked = true; break;
+                case 9: RbPdfRotate.IsChecked = true; break;
             }
         }
 
@@ -384,7 +391,8 @@ namespace TurboConverter
                             RbPdfSplit.IsChecked == true ? 5 :
                             RbMdToPdf.IsChecked == true ? 6 :
                             RbPdfExtractImages.IsChecked == true ? 7 :
-                            RbImgToIco.IsChecked == true ? 8 : 0
+                            RbImgToIco.IsChecked == true ? 8 : 
+                            RbPdfRotate.IsChecked == true ? 9 : 0
             };
 
             SettingsManager.Kaydet(ayarlar);

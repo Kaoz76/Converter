@@ -73,7 +73,7 @@ namespace TurboConverter
         {
             OpenFileDialog dialog = new OpenFileDialog { Multiselect = true };
 
-            if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfMerge.IsChecked == true || RbPdfSplit.IsChecked == true || RbPdfExtractImages.IsChecked == true || RbPdfRotate.IsChecked == true)
+            if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfMerge.IsChecked == true || RbPdfSplit.IsChecked == true || RbPdfExtractImages.IsChecked == true || RbPdfRotate.IsChecked == true || RbPdfCompress.IsChecked == true)
                 dialog.Filter = "PDF Dosyaları (*.pdf)|*.pdf";
             else if (RbTextToPdf.IsChecked == true)
                 dialog.Filter = "Metin Dosyaları (*.txt)|*.txt";
@@ -178,6 +178,7 @@ namespace TurboConverter
             else if (RbPdfExtractImages.IsChecked == true) seciliMod = 7;
             else if (RbImgToIco.IsChecked == true) seciliMod = 8;
             else if (RbPdfRotate.IsChecked == true) seciliMod = 9;
+            else if (RbPdfCompress.IsChecked == true) seciliMod = 10;
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -196,7 +197,8 @@ namespace TurboConverter
                                seciliMod == 6 ? "Markdown_PDFs" :
                                seciliMod == 7 ? "Extracted_Images" :
                                seciliMod == 8 ? "Converted_Icons" : 
-                               seciliMod == 9 ? "Rotated_PDFs" : "";
+                               seciliMod == 9 ? "Rotated_PDFs" : 
+                               seciliMod == 10 ? "Compressed_PDFs" : "";
 
 
             if (!string.IsNullOrEmpty(klasorAdi))
@@ -220,7 +222,7 @@ namespace TurboConverter
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
                     // Mod 7 (Extract Images) Çoklu PDF'leri işleyeceği için buraya eklendi
-                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9)
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9 || seciliMod == 10)
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
@@ -232,6 +234,7 @@ namespace TurboConverter
                                 else if (seciliMod == 5) PdfSplitMerge.Split(file, _sonCiktiKlasoru, sifreleAktif, sifre, token);
                                 else if (seciliMod == 7) PdfImageExtractor.Extract(file, _sonCiktiKlasoru, sifre, token);
                                 else if (seciliMod == 9) PdfRotator.Rotate(file, _sonCiktiKlasoru, donusAcisi, token);
+                                else if (seciliMod == 10) PdfCompressor.Compress(file, _sonCiktiKlasoru, token);
                             }
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
@@ -372,6 +375,7 @@ namespace TurboConverter
                 case 7: RbPdfExtractImages.IsChecked = true; break;
                 case 8: RbImgToIco.IsChecked = true; break;
                 case 9: RbPdfRotate.IsChecked = true; break;
+                case 10: RbPdfCompress.IsChecked = true; break;
             }
         }
 
@@ -392,7 +396,8 @@ namespace TurboConverter
                             RbMdToPdf.IsChecked == true ? 6 :
                             RbPdfExtractImages.IsChecked == true ? 7 :
                             RbImgToIco.IsChecked == true ? 8 : 
-                            RbPdfRotate.IsChecked == true ? 9 : 0
+                            RbPdfRotate.IsChecked == true ? 9 :
+                            RbPdfCompress.IsChecked == true ? 10 : 0
             };
 
             SettingsManager.Kaydet(ayarlar);

@@ -1,7 +1,7 @@
 <Window x:Class="TurboConverter.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="TurboConverter - Akıllı Belge Dönüştürücü" Height="650" Width="1000"
+        Title="TurboConverter - Akıllı Belge Dönüştürücü" Height="750" Width="1000"
         WindowStartupLocation="CenterScreen"
         Icon="/convert.ico"
         Background="{DynamicResource BgBrush}">
@@ -36,7 +36,8 @@
                 <RadioButton x:Name="RbMdToPdf" Content="Markdown (MD) ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbPdfExtractImages" Content="PDF'ten Resimleri Ayıkla" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbImgToIco" Content="Resim ➔ İkon (ICO)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
-                <RadioButton x:Name="RbPdfRotate" Content="PDF Sayfalarını Döndür" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfRotate" Content="PDF Sayfalarını Döndür" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfCompress" Content="PDF Sıkıştır (Kayıpsız)" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 
                 <TextBlock Text="Ayarlar" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
 

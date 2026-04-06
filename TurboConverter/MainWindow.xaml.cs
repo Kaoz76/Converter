@@ -81,8 +81,11 @@ namespace TurboConverter
                 dialog.Filter = "Metin Dosyaları (*.txt)|*.txt";
             else if (RbMdToPdf.IsChecked == true)
                 dialog.Filter = "Markdown Dosyaları (*.md)|*.md";
+            else if (RbPptToPdf.IsChecked == true)
+                dialog.Filter = "PowerPoint Dosyaları (*.pptx;*.ppt)|*.pptx;*.ppt";
             else
                 dialog.Filter = "Resim Dosyaları|*.jpg;*.jpeg;*.png;*.webp;*.bmp";
+
 
             if (dialog.ShowDialog() == true)
             {
@@ -182,6 +185,7 @@ namespace TurboConverter
             else if (RbPdfRotate.IsChecked == true) seciliMod = 9;
             else if (RbPdfCompress.IsChecked == true) seciliMod = 10;
             else if (RbPdfRepair.IsChecked == true) seciliMod = 11;
+            else if (RbPptToPdf.IsChecked == true) seciliMod = 12;
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -202,7 +206,9 @@ namespace TurboConverter
                                seciliMod == 8 ? "Converted_Icons" : 
                                seciliMod == 9 ? "Rotated_PDFs" : 
                                seciliMod == 10 ? "Compressed_PDFs" :
-                               seciliMod == 11 ? "Repaired_PDFs" : "";
+                               seciliMod == 11 ? "Repaired_PDFs" :
+                               seciliMod == 12 ? "Converted_PPTs" : "";
+
 
 
 
@@ -227,7 +233,7 @@ namespace TurboConverter
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
                     // Mod 7 (Extract Images) Çoklu PDF'leri işleyeceği için buraya eklendi
-                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9 || seciliMod == 10 || seciliMod == 11)
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9 || seciliMod == 10 || seciliMod == 11 || seciliMod == 12)
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
@@ -241,6 +247,7 @@ namespace TurboConverter
                                 else if (seciliMod == 9) PdfRotator.Rotate(file, _sonCiktiKlasoru, donusAcisi, token);
                                 else if (seciliMod == 10) PdfCompressor.Compress(file, _sonCiktiKlasoru, token);
                                 else if (seciliMod == 11) PdfRepairer.Repair(file, _sonCiktiKlasoru, token);
+                                else if (seciliMod == 12) PptToPdf.Convert(file, _sonCiktiKlasoru, token);
                             }
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
@@ -383,6 +390,7 @@ namespace TurboConverter
                 case 9: RbPdfRotate.IsChecked = true; break;
                 case 10: RbPdfCompress.IsChecked = true; break;
                 case 11: RbPdfRepair.IsChecked = true; break;
+                case 12: RbPptToPdf.IsChecked = true; break;
             }
         }
 
@@ -405,7 +413,8 @@ namespace TurboConverter
                             RbImgToIco.IsChecked == true ? 8 : 
                             RbPdfRotate.IsChecked == true ? 9 :
                             RbPdfCompress.IsChecked == true ? 10 :
-                            RbPdfRepair.IsChecked == true ? 11 : 0
+                            RbPdfRepair.IsChecked == true ? 11 :
+                            RbPptToPdf.IsChecked == true ? 12 : 0
             };
 
             SettingsManager.Kaydet(ayarlar);

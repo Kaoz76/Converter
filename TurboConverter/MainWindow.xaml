@@ -38,7 +38,8 @@
                 <RadioButton x:Name="RbImgToIco" Content="Resim ➔ İkon (ICO)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbPdfRotate" Content="PDF Sayfalarını Döndür" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbPdfCompress" Content="PDF Sıkıştır (Kayıpsız)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
-                <RadioButton x:Name="RbPdfRepair" Content="PDF Onar (Kurtar)" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPdfRepair" Content="PDF Onar (Kurtar)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbPptToPdf" Content="PowerPoint (PPTX) ➔ PDF" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 
                 <TextBlock Text="Ayarlar" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
 

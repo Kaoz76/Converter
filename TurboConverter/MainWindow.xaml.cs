@@ -75,7 +75,7 @@ namespace TurboConverter
 
             if (RbPdfToJpg.IsChecked == true || RbPdfToText.IsChecked == true || RbPdfMerge.IsChecked == true || 
                 RbPdfSplit.IsChecked == true || RbPdfExtractImages.IsChecked == true || RbPdfRotate.IsChecked == true 
-                || RbPdfCompress.IsChecked == true || RbPdfRepair.IsChecked == true)
+                || RbPdfCompress.IsChecked == true || RbPdfRepair.IsChecked == true || RbPdfToWord.IsChecked == true)
                 dialog.Filter = "PDF Dosyaları (*.pdf)|*.pdf";
             else if (RbTextToPdf.IsChecked == true)
                 dialog.Filter = "Metin Dosyaları (*.txt)|*.txt";
@@ -83,6 +83,8 @@ namespace TurboConverter
                 dialog.Filter = "Markdown Dosyaları (*.md)|*.md";
             else if (RbPptToPdf.IsChecked == true)
                 dialog.Filter = "PowerPoint Dosyaları (*.pptx;*.ppt)|*.pptx;*.ppt";
+            else if (RbWordToPdf.IsChecked == true)
+                dialog.Filter = "Word Dosyaları (*.docx;*.doc)|*.docx;*.doc";
             else
                 dialog.Filter = "Resim Dosyaları|*.jpg;*.jpeg;*.png;*.webp;*.bmp";
 
@@ -186,6 +188,8 @@ namespace TurboConverter
             else if (RbPdfCompress.IsChecked == true) seciliMod = 10;
             else if (RbPdfRepair.IsChecked == true) seciliMod = 11;
             else if (RbPptToPdf.IsChecked == true) seciliMod = 12;
+            else if (RbWordToPdf.IsChecked == true) seciliMod = 13;
+            else if (RbPdfToWord.IsChecked == true) seciliMod = 14;
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -207,7 +211,9 @@ namespace TurboConverter
                                seciliMod == 9 ? "Rotated_PDFs" : 
                                seciliMod == 10 ? "Compressed_PDFs" :
                                seciliMod == 11 ? "Repaired_PDFs" :
-                               seciliMod == 12 ? "Converted_PPTs" : "";
+                               seciliMod == 12 ? "Converted_PPTs" :
+                               seciliMod == 13 ? "Converted_from_Word" :
+                               seciliMod == 14 ? "Converted_to_Word" : "";
 
 
 
@@ -232,23 +238,29 @@ namespace TurboConverter
                 {
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
-                    // Mod 7 (Extract Images) Çoklu PDF'leri işleyeceği için buraya eklendi
-                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9 || seciliMod == 10 || seciliMod == 11 || seciliMod == 12)
+                    
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9 || seciliMod == 10 || seciliMod == 11 || seciliMod == 12 || seciliMod == 13 || seciliMod == 14)
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
                             token.ThrowIfCancellationRequested();
-                            if (Path.GetExtension(file).ToLower() == ".pdf")
-                            {
-                                if (seciliMod == 0) PdfToJpg.Convert(file, _sonCiktiKlasoru, kaliteCarpani, token);
-                                else if (seciliMod == 2) PdfToText.Convert(file, _sonCiktiKlasoru, token);
-                                else if (seciliMod == 5) PdfSplitMerge.Split(file, _sonCiktiKlasoru, sifreleAktif, sifre, token);
-                                else if (seciliMod == 7) PdfImageExtractor.Extract(file, _sonCiktiKlasoru, sifre, token);
-                                else if (seciliMod == 9) PdfRotator.Rotate(file, _sonCiktiKlasoru, donusAcisi, token);
-                                else if (seciliMod == 10) PdfCompressor.Compress(file, _sonCiktiKlasoru, token);
-                                else if (seciliMod == 11) PdfRepairer.Repair(file, _sonCiktiKlasoru, token);
-                                else if (seciliMod == 12) PptToPdf.Convert(file, _sonCiktiKlasoru, token);
-                            }
+                            string ext = Path.GetExtension(file).ToLower();
+
+                            
+                            if (seciliMod == 0 && ext == ".pdf") PdfToJpg.Convert(file, _sonCiktiKlasoru, kaliteCarpani, token);
+                            else if (seciliMod == 2 && ext == ".pdf") PdfToText.Convert(file, _sonCiktiKlasoru, token);
+                            else if (seciliMod == 5 && ext == ".pdf") PdfSplitMerge.Split(file, _sonCiktiKlasoru, sifreleAktif, sifre, token);
+                            else if (seciliMod == 7 && ext == ".pdf") PdfImageExtractor.Extract(file, _sonCiktiKlasoru, sifre, token);
+                            else if (seciliMod == 9 && ext == ".pdf") PdfRotator.Rotate(file, _sonCiktiKlasoru, donusAcisi, token);
+                            else if (seciliMod == 10 && ext == ".pdf") PdfCompressor.Compress(file, _sonCiktiKlasoru, token);
+                            else if (seciliMod == 11 && ext == ".pdf") PdfRepairer.Repair(file, _sonCiktiKlasoru, token);
+
+                            
+                            else if (seciliMod == 12 && (ext == ".pptx" || ext == ".ppt")) PptToPdf.Convert(file, _sonCiktiKlasoru, token);
+                            else if (seciliMod == 13 && (ext == ".docx" || ext == ".doc")) WordConverter.Convert(file, _sonCiktiKlasoru, 0, token);
+
+                            else if (seciliMod == 14 && ext == ".pdf") WordConverter.Convert(file, _sonCiktiKlasoru, 1, token);
+
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
                     }
@@ -391,6 +403,8 @@ namespace TurboConverter
                 case 10: RbPdfCompress.IsChecked = true; break;
                 case 11: RbPdfRepair.IsChecked = true; break;
                 case 12: RbPptToPdf.IsChecked = true; break;
+                case 13: RbWordToPdf.IsChecked = true; break;
+                case 14: RbPdfToWord.IsChecked = true; break;
             }
         }
 
@@ -414,7 +428,9 @@ namespace TurboConverter
                             RbPdfRotate.IsChecked == true ? 9 :
                             RbPdfCompress.IsChecked == true ? 10 :
                             RbPdfRepair.IsChecked == true ? 11 :
-                            RbPptToPdf.IsChecked == true ? 12 : 0
+                            RbPptToPdf.IsChecked == true ? 12 :
+                            RbWordToPdf.IsChecked == true ? 13 :
+                            RbPdfToWord.IsChecked == true ? 14 : 0
             };
 
             SettingsManager.Kaydet(ayarlar);

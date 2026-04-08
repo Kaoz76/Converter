@@ -85,6 +85,8 @@ namespace TurboConverter
                 dialog.Filter = "PowerPoint Dosyaları (*.pptx;*.ppt)|*.pptx;*.ppt";
             else if (RbWordToPdf.IsChecked == true)
                 dialog.Filter = "Word Dosyaları (*.docx;*.doc)|*.docx;*.doc";
+            else if (RbExcelToPdf.IsChecked == true)
+                dialog.Filter = "Excel Dosyaları (*.xlsx;*.xls;*.csv)|*.xlsx;*.xls;*.csv";
             else
                 dialog.Filter = "Resim Dosyaları|*.jpg;*.jpeg;*.png;*.webp;*.bmp";
 
@@ -190,6 +192,7 @@ namespace TurboConverter
             else if (RbPptToPdf.IsChecked == true) seciliMod = 12;
             else if (RbWordToPdf.IsChecked == true) seciliMod = 13;
             else if (RbPdfToWord.IsChecked == true) seciliMod = 14;
+            else if (RbExcelToPdf.IsChecked == true) seciliMod = 15;
 
             double kaliteCarpani = CmbQuality.SelectedIndex == 0 ? 1.0 :
                                    CmbQuality.SelectedIndex == 1 ? 2.0 :
@@ -213,7 +216,8 @@ namespace TurboConverter
                                seciliMod == 11 ? "Repaired_PDFs" :
                                seciliMod == 12 ? "Converted_PPTs" :
                                seciliMod == 13 ? "Converted_from_Word" :
-                               seciliMod == 14 ? "Converted_to_Word" : "";
+                               seciliMod == 14 ? "Converted_to_Word" :
+                               seciliMod == 15 ? "Converted_Excels" : "";
 
 
 
@@ -239,7 +243,8 @@ namespace TurboConverter
                     var pOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = token };
 
                     
-                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9 || seciliMod == 10 || seciliMod == 11 || seciliMod == 12 || seciliMod == 13 || seciliMod == 14)
+                    if (seciliMod == 0 || seciliMod == 2 || seciliMod == 5 || seciliMod == 7 || seciliMod == 9 || 
+                    seciliMod == 10 || seciliMod == 11 || seciliMod == 12 || seciliMod == 13 || seciliMod == 14 || seciliMod == 15)
                     {
                         Parallel.ForEach(tumDosyalar, pOptions, (file) =>
                         {
@@ -260,6 +265,8 @@ namespace TurboConverter
                             else if (seciliMod == 13 && (ext == ".docx" || ext == ".doc")) WordConverter.Convert(file, _sonCiktiKlasoru, 0, token);
 
                             else if (seciliMod == 14 && ext == ".pdf") WordConverter.Convert(file, _sonCiktiKlasoru, 1, token);
+
+                            else if (seciliMod == 15 && (ext == ".xlsx" || ext == ".xls" || ext == ".csv")) ExcelToPdf.Convert(file, _sonCiktiKlasoru, token);
 
                             UIGuncelle(Interlocked.Increment(ref islenenDosya), toplamDosya, sw);
                         });
@@ -405,6 +412,7 @@ namespace TurboConverter
                 case 12: RbPptToPdf.IsChecked = true; break;
                 case 13: RbWordToPdf.IsChecked = true; break;
                 case 14: RbPdfToWord.IsChecked = true; break;
+                case 15: RbExcelToPdf.IsChecked = true; break;
             }
         }
 
@@ -430,7 +438,8 @@ namespace TurboConverter
                             RbPdfRepair.IsChecked == true ? 11 :
                             RbPptToPdf.IsChecked == true ? 12 :
                             RbWordToPdf.IsChecked == true ? 13 :
-                            RbPdfToWord.IsChecked == true ? 14 : 0
+                            RbPdfToWord.IsChecked == true ? 14 :
+                            RbExcelToPdf.IsChecked == true ? 15 : 0
             };
 
             SettingsManager.Kaydet(ayarlar);

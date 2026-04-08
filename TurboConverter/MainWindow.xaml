@@ -41,8 +41,9 @@
                 <RadioButton x:Name="RbPdfRepair" Content="PDF Onar (Kurtar)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbPptToPdf" Content="PowerPoint (PPTX) ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
                 <RadioButton x:Name="RbWordToPdf" Content="Word (DOCX) ➔ PDF" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
-                <RadioButton x:Name="RbPdfToWord" Content="PDF ➔ Word (DOCX)" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
-
+                <RadioButton x:Name="RbPdfToWord" Content="PDF ➔ Word (DOCX)" Margin="0,0,0,12" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                <RadioButton x:Name="RbExcelToPdf" Content="Excel (XLSX) ➔ PDF" Margin="0,0,0,25" GroupName="Mode" Foreground="{DynamicResource TextMainBrush}"/>
+                
                 <TextBlock Text="Ayarlar" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Görüntü Kalitesi (Çarpan):" Margin="0,0,0,5" Foreground="{DynamicResource TextMainBrush}"/>
